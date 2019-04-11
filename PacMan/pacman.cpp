@@ -11,6 +11,7 @@
 
 #include <stdio.h> // printf()
 #include <conio.h> // getch()
+#define _WIN32_WINNT 0x0500
 #include <windows.h>
 #include <stdbool.h>
 #include <vector>
@@ -50,6 +51,36 @@ struct PacMan myPacMan;
 
 char playfield[H + 1][W + 1] =
 {
+{ "###########################################################" },
+{ "#FFFFFFFFFFFFFFFFFFFFFFF###########FFFFFFFFFFFFFFFFFFFFFFF#" },
+{ "#F#########F###########F###########F###########F#########F#" },
+{ "#F#########F###########F###########F###########F#########F#" },
+{ "#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF#" },
+{ "#F#########F##F#############################F##F#########F#" },
+{ "#FFFFFFFFFFF##F#############################F##FFFFFFFFFFF#" },
+{ "###########F##FFFFFFFFFFFFFF###FFFFFFFFFFFFFF##F###########" },
+{ "###########F###############F###F###############F###########" },
+{ "###########F##FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF##F###########" },
+{ "###########F##F#############---#############F##F###########" },
+{ "#FFFFFFFFFFFFFF#                           #FFFFFFFFFFFFFF#" },
+{ "#FFFFFFFFFFFFFF#                           #FFFFFFFFFFFFFF#" },
+{ "###########F##F#############################F##F###########" },
+{ "###########F##FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF##F###########" },
+{ "###########F##F#############################F##F###########" },
+{ "#FFFFFFFFFFFFFFFFFFFFFFFFFFF###FFFFFFFFFFFFFFFFFFFFFFFFFFF#" },
+{ "#F#########F###############F###F###############F#########F#" },
+{ "#F#########F###############F###F###############F#########F#" },
+{ "#FFFFFFFF##FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF##FFFFFFFF#" },
+{ "########F##F##F#############################F##F##F########" },
+{ "########F##F##F#############################F##F##F########" },
+{ "#FFFFFFFFFFF##FFFFFFFFFFFFFF###FFFFFFFFFFFFFF##FFFFFFFFFFF#" },
+{ "#F#########################F###F#########################F#" },
+{ "#F#########################F###F#########################F#" },
+{ "#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF#" },
+{ "###########################################################" }
+}; // <-- CAUTION! Semicolon necessary!
+
+/*
 { "############################################################" },
 { "#                                                          #" },
 { "# ########  ######## #            ###############          #" },
@@ -80,34 +111,7 @@ char playfield[H + 1][W + 1] =
 { "# ################                     #################   #" },
 { "#                            #                             #" },
 { "#############################M##############################" }
-}; // <-- CAUTION! Semicolon necessary!
-
-/*{ "#######################################################" },
-{ "#                     ###########                     #" },
-{ "# ######## ########## ########### ########## ######## #" },
-{ "# ######## ########## ########### ########## ######## #" },
-{ "#                                                     #" },
-{ "# ######## # ############################# # ######## #" },
-{ "#          # ############################# #          #" },
-{ "########## #              ###              # ##########" },
-{ "         # ############## ### ##############            # # # #######" },
-{ "         # #                              # # # #######" },
-{ "########## # ############# M######### # ############# #" },
-{ "#                                                      #" },
-{ "                                                         " },
-{ "#                                                        #" },
-{ "#                     ###############                      #" },
-{ "#                                                          #" },
-{ "# ########    ############    ############  ############   #" },
-{ "# ########                                             #   #" },
-{ "#        #########  ######    ######################## #   #" },
-{ "######## ###             #    #                      # #   #" },
-{ "######## ###             #    #  #                   # #   #" },
-{ "#        ###             #    #  ##################### #   #" },
-{ "# ################            #                        #   #" },
-{ "# ################                     #################   #" },
-{ "#                            #                             #" },
-{ "#############################M##############################" }*/
+*/
 class Ghost {
 
 public:
@@ -235,7 +239,7 @@ void initialize()
 	{
 		for (int j = 0; j < W; j++)
 		{
-			if (playfield[i][j] == ' ')
+			if (playfield[i][j] == 'F')
 				playfield[i][j] = FOOD_SYMBOL;
 		}
 	}
@@ -252,7 +256,7 @@ void user_input()
 	if (_kbhit())
 	{
 		char c1 = _getch();
-		if (c1 == 'a')
+		if (c1 == ' ')
 		{
 			// stop moving
 			myPacMan.vx = 0;
@@ -263,7 +267,7 @@ void user_input()
 		{
 			char c2 = _getch();
 
-			printf("c1=%d c2=%d\n", c1, c2);
+			//printf("c1=%d c2=%d\n", c1, c2);
 
 			myPacMan.vx = 0;
 			myPacMan.vy = 0;
@@ -338,11 +342,7 @@ void show_playfield()
 		}
 		printf("\n");
 	}
-
 	printf("Score: %d - Lives:%d\n", myPacMan.food_collected, myPacMan.lives);
-
-	printf("Sound effects used are from 'Cartoon Sound Effects Collection'\n");
-	printf("http://www.orangefreesounds.com");
 }
 
 void check_collisions()
@@ -392,7 +392,14 @@ int main()
 	_getch();
 	*/
 
-	system("cls");
+	system("cls"); 
+	
+	//Resizes cmd window
+	system("MODE 61,33");
+
+	//Disables resize and full screen.
+	HWND consoleWindow = GetConsoleWindow();
+	SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
 
 	hidecursor();
 	initialize();
@@ -409,7 +416,7 @@ int main()
 		show_playfield();
 		check_collisions();
 
-		Sleep(5);
+		//Sleep(5);
 
 		if (++steps % 100 == 0)
 		{
