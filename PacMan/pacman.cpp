@@ -214,15 +214,18 @@ public:
 			// field is not free, i.e. a wall:
 			// so do not move Ghost at all in this step, but
 			// randomly choose a new direction to move
-			choose_random_direction();
+			choose_random_direction(); 
+			//choose_smart_path();
 		}
 
 		// randomize behavior of the Ghost
 		if (rand() % 30 == 0) 
 		{
-			choose_random_direction();
-		}
 
+			choose_random_direction();
+			//choose_smart_path();
+		}
+		
 	} // move
 
 
@@ -237,6 +240,146 @@ public:
 		case 3: vx = 0;  vy = -1; break;
 		}
 	}
+
+
+	void choose_smart_path()
+	{
+		/*
+		int r = rand() % 2;
+		//If Right
+		if (vx == 1 || vx == -1)
+		{
+			switch (r)
+			{
+			case 0: vx = 0; vy = 1;  break;
+			case 1: vx = 0;  vy = -1;  break;
+			}
+		}
+		else if (vy == 1 || vy == -1)
+		{
+			switch (r)
+			{
+			case 0: vx = 1; vy = 0;  break;
+			case 1: vx = -1;  vy = 0;  break;
+			}
+		}
+		*/
+		boolean canRight = false;
+		boolean canLeft = false;
+		boolean canDown = false;
+		boolean canUp = false;
+		//printf("      (%d,%d)       ",vx, vy);
+		if (vx == 1)
+		{
+			if (ghostField[position.y+1][position.x] != WALL_SYMBOL) 
+			{
+				//vx = 0; vy = 1;
+				canUp = true;
+			} 
+			if (ghostField[position.y-1][position.x] != WALL_SYMBOL) 
+			{
+				//vx = 0; vy = -1;
+				canDown = true;
+			}
+			if (ghostField[position.y][position.x-1] != WALL_SYMBOL)
+			{
+				//vx = -1; vy = 0;
+				canLeft = true;
+			}
+		}
+		else if (vy == 1)
+		{
+			if (ghostField[position.y][position.x+1] != WALL_SYMBOL)
+			{
+				//vx = 1; vy = 0;
+				canRight = true;
+			}
+			if (ghostField[position.y][position.x-1] != WALL_SYMBOL)
+			{
+				//vx = -1; vy = 0;
+				canLeft = true;
+			}
+			if (ghostField[position.y - 1][position.x] != WALL_SYMBOL)
+			{
+				//vx = 0; vy = -1;
+				canDown = true;
+			}
+		}
+		else if (vy == -1)
+		{
+			if (ghostField[position.y][position.x-1] != WALL_SYMBOL)
+			{
+				//vx = -1; vy = 0;
+				canLeft = true;
+			}
+			if (ghostField[position.y][position.x+1] != WALL_SYMBOL)
+			{
+				//vx = 1; vy = 0;
+				canRight = true;
+			}
+			if (ghostField[position.y + 1][position.x] != WALL_SYMBOL)
+			{
+				//vx = 0; vy = 1;
+				canUp = true;
+			}
+		}
+		else 
+		{
+			if (ghostField[position.y + 1][position.x] != WALL_SYMBOL)
+			{
+				//vx = 0; vy = 1;
+				canUp = true;
+			}
+			if (ghostField[position.y - 1][position.x] != WALL_SYMBOL)
+			{
+				//vx = 0; vy = -1;
+				canDown = true;
+			}
+			if (ghostField[position.y][position.x + 1] != WALL_SYMBOL)
+			{
+				//vx = 1; vy = 0;
+				canRight = true;
+			}
+		}
+		boolean chosePath = false;
+		int r = rand() % 4;
+		while (!chosePath) 
+		{
+			int r = rand() % 4;
+			switch (r)
+			{
+			case 0:
+				if (canRight)
+				{
+					vx = 1; vy = 0;
+					chosePath = true;
+				}
+				break;
+			case 1:
+				if (canUp)
+				{
+					vx = 0;  vy = 1;
+					chosePath = true;
+				}  
+				break;
+			case 2:
+				if (canLeft)
+				{
+					vx = -1; vy = 0;
+					chosePath = true;
+				}  
+				break;
+			case 3:
+				if (canLeft)
+				{
+					vx = 0; vy = -1;
+					chosePath = true;
+				}
+				break;
+			}
+		}
+	}
+
 
 
 private:
