@@ -218,8 +218,10 @@ public:
 		}
 
 		// randomize behavior of the Ghost
-		if (rand() % 30 == 0)
+		if (rand() % 30 == 0) 
+		{
 			choose_random_direction();
+		}
 
 	} // move
 
@@ -457,7 +459,7 @@ void show_playfield()
 		}
 		printf("\n");
 	}
-	printf("Score: %d - Lives:%d - Remaining:%d         \n", myPacMan.food_collected, myPacMan.lives, foodToWin - myPacMan.food_collected);
+	printf("Score:%3d - Remaining:%3d - Lives:%2d\n", myPacMan.food_collected, foodToWin - myPacMan.food_collected, myPacMan.lives);
 }
 
 void check_collisions()
