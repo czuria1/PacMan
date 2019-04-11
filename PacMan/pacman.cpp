@@ -26,10 +26,10 @@
 #define DOOR_SYMBOL '-'
 #define EMPTY_SYMBOL ' '
 #define NO_SPAWN_SYMBOL 'X'
-#define FOOD_TO_WIN 200
 
 bool collision_with_ghost = false;
 bool game_over = false;
+int foodToWin = 0;
 
 int main();
 void resetGhosts();
@@ -53,8 +53,12 @@ struct PacMan {
 
 
 struct PacMan myPacMan;
+//Saves field from inital startup.
 char resetField[H + 1][W + 1];
+//Pac-man is on a separate layer.
+char playerField[H + 1][W + 1];
 
+//Will hold food and display all characters
 char playfield[H + 1][W + 1] =
 {
 { "############################################################" },
@@ -88,7 +92,9 @@ char playfield[H + 1][W + 1] =
 { "#                                                          #" },
 { "############################################################" }
 }; // <-- CAUTION! Semicolon necessary!
-char playfield2[H + 1][W + 1] =
+
+//Ghost layer
+char ghostField[H + 1][W + 1] =
 {
 { "############################################################" },
 { "#                       ############                       #" },
@@ -174,12 +180,13 @@ public:
 
 		// 2. what is at this place where we plan to move the Ghost to?
 		char whats_there = playfield[dy][dx];
-		char whats_there2 = playfield2[dy][dx];
+		char whats_there2 = ghostField[dy][dx];
+		char whats_there3 = playerField[dy][dx];
 		// 3. is it a PacMan?
-		if (whats_there == PACMAN_SYMBOL)
+		if (whats_there3 == PACMAN_SYMBOL)
 		{
 			collision_with_ghost = true;
-			playfield[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
+			playerField[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
 		}
 
 		// 4. is the field free to move there?
@@ -195,12 +202,12 @@ public:
 				playfield[position.y][position.x] = EMPTY_SYMBOL;
 			}
 			*/
-			playfield2[position.y][position.x] = EMPTY_SYMBOL;
+			ghostField[position.y][position.x] = EMPTY_SYMBOL;
 
 			position.x = dx;
 			position.y = dy;
 			//lastChar = playfield[position.y][position.x];
-			playfield2[position.y][position.x] = GHOST_SYMBOL;
+			ghostField[position.y][position.x] = GHOST_SYMBOL;
 		}
 		else
 		{
@@ -304,12 +311,13 @@ void initialize()
 			if (playfield[i][j] == EMPTY_SYMBOL)
 			{
 				playfield[i][j] = FOOD_SYMBOL;
+				foodToWin++;
 			}
 			//Replace X with ' '
 			else if (playfield[i][j] == NO_SPAWN_SYMBOL) 
 			{
 				playfield[i][j] = EMPTY_SYMBOL;
-				playfield2[i][j] = EMPTY_SYMBOL;
+				ghostField[i][j] = EMPTY_SYMBOL;
 			}
 		}
 	}
@@ -351,6 +359,10 @@ void user_input()
 		{
 			resetGhosts();
 		}
+		if (c1 == 'w')
+		{
+			myPacMan.food_collected = foodToWin;
+		}
 		if (c1 == -32)
 		{
 			char c2 = _getch();
@@ -390,7 +402,7 @@ void move_pacman()
 	int ny = myPacMan.vy + myPacMan.position.y;
 
 	// 2. delete PacMan from old position, but only remove food.
-	playfield[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
+	playerField[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
 
 	// 3. test whether there is a wall at (nx,ny)  
 	if (playfield[ny][nx] == WALL_SYMBOL || playfield[ny][nx] == DOOR_SYMBOL)
@@ -404,19 +416,20 @@ void move_pacman()
 	myPacMan.position.x += myPacMan.vx;
 	myPacMan.position.y += myPacMan.vy;
 
-	if (playfield2[ny][nx] == GHOST_SYMBOL) {
+	if (ghostField[ny][nx] == GHOST_SYMBOL) {
 		collision_with_ghost = true;
-		playfield[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
+		playerField[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
 	}
 	else
 	{
 		if (playfield[ny][nx] == FOOD_SYMBOL)
 		{
 			myPacMan.food_collected++;
+			playfield[ny][nx] = EMPTY_SYMBOL;
 		}
 
 		// put PacMan back again to playfield
-		playfield[myPacMan.position.y][myPacMan.position.x] = PACMAN_SYMBOL;
+		playerField[myPacMan.position.y][myPacMan.position.x] = PACMAN_SYMBOL;
 	}
 
 } // move_pacman
@@ -429,9 +442,13 @@ void show_playfield()
 	{
 		for (int j = 0; j < W; j++)
 		{
-			if(playfield2[i][j] == GHOST_SYMBOL)
+			if(ghostField[i][j] == GHOST_SYMBOL)
 			{
-				printf("%c", playfield2[i][j]);
+				printf("%c", ghostField[i][j]);
+			}
+			else if (playerField[i][j] == PACMAN_SYMBOL) 
+			{
+				printf("%c", playerField[i][j]);
 			}
 			else 
 			{
@@ -440,7 +457,7 @@ void show_playfield()
 		}
 		printf("\n");
 	}
-	printf("Score: %d - Lives:%d\n", myPacMan.food_collected, myPacMan.lives);
+	printf("Score: %d - Lives:%d - Remaining:%d         \n", myPacMan.food_collected, myPacMan.lives, foodToWin - myPacMan.food_collected);
 }
 
 void check_collisions()
@@ -491,15 +508,15 @@ void resetGame()
 		for (int j = 0; j < W; j++)
 		{
 			playfield[i][j] = resetField[i][j];
-			if (playfield2[i][j] == GHOST_SYMBOL) {
-				playfield2[i][j] = EMPTY_SYMBOL;
+			if (ghostField[i][j] == GHOST_SYMBOL) {
+				ghostField[i][j] = EMPTY_SYMBOL;
 			}
 		}
 	}
 	collision_with_ghost = false;
 	game_over = false;
 	allGhosts.clear();
-
+	foodToWin = 0;
 	main();
 }
 
@@ -511,8 +528,8 @@ void resetGhosts() {
 	{
 		for (int j = 0; j < W; j++)
 		{
-			if (playfield2[i][j] == GHOST_SYMBOL) {
-				playfield2[i][j] = EMPTY_SYMBOL;
+			if (ghostField[i][j] == GHOST_SYMBOL) {
+				ghostField[i][j] = EMPTY_SYMBOL;
 			}
 		}
 	}
@@ -584,11 +601,11 @@ int main()
 			show_playfield();
 		}
 
-		if (myPacMan.food_collected == FOOD_TO_WIN)
+		if (myPacMan.food_collected >= foodToWin)
 		{
 			set_cursor_position(W / 2 - 9, H / 2 - 3);
 			printf("                ");
-			set_cursor_position(W / 2 - 8, H / 2 - 2);
+			set_cursor_position(W / 2 - 7, H / 2 - 2);
 			printf("   YOU WON!   ");
 			set_cursor_position(W / 2 - 8, H / 2 - 1);
 			printf("                ");
@@ -603,9 +620,6 @@ int main()
 	printf("                ");
 	set_cursor_position(W / 2 - 8, H / 2 - 2);
 	printf("   GAME OVER!   ");
-	Sleep(1500);
-	set_cursor_position(W / 2 - 9, H / 2 + 10);
-	printf("   Press Any Key   ");
-	_getch();
+	Sleep(2000);
 	resetGame();
 } // main
