@@ -23,6 +23,9 @@
 #define GHOST_SYMBOL  'G'
 #define FOOD_SYMBOL '.'
 #define WALL_SYMBOL '#'
+#define DOOR_SYMBOL '-'
+#define EMPTY_SYMBOL ' '
+#define NO_SPAWN_SYMBOL 'X'
 #define FOOD_TO_WIN 200
 
 bool collision_with_ghost = false;
@@ -52,31 +55,34 @@ struct PacMan myPacMan;
 char playfield[H + 1][W + 1] =
 {
 { "###########################################################" },
-{ "#FFFFFFFFFFFFFFFFFFFFFFF###########FFFFFFFFFFFFFFFFFFFFFFF#" },
-{ "#F#########F###########F###########F###########F#########F#" },
-{ "#F#########F###########F###########F###########F#########F#" },
-{ "#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF#" },
-{ "#F#########F##F#############################F##F#########F#" },
-{ "#FFFFFFFFFFF##F#############################F##FFFFFFFFFFF#" },
-{ "###########F##FFFFFFFFFFFFFF###FFFFFFFFFFFFFF##F###########" },
-{ "###########F###############F###F###############F###########" },
-{ "###########F##FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF##F###########" },
-{ "###########F##F#############---#############F##F###########" },
-{ "#FFFFFFFFFFFFFF#                           #FFFFFFFFFFFFFF#" },
-{ "#FFFFFFFFFFFFFF#                           #FFFFFFFFFFFFFF#" },
-{ "###########F##F#############################F##F###########" },
-{ "###########F##FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF##F###########" },
-{ "###########F##F#############################F##F###########" },
-{ "#FFFFFFFFFFFFFFFFFFFFFFFFFFF###FFFFFFFFFFFFFFFFFFFFFFFFFFF#" },
-{ "#F#########F###############F###F###############F#########F#" },
-{ "#F#########F###############F###F###############F#########F#" },
-{ "#FFFFFFFF##FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF##FFFFFFFF#" },
-{ "########F##F##F#############################F##F##F########" },
-{ "########F##F##F#############################F##F##F########" },
-{ "#FFFFFFFFFFF##FFFFFFFFFFFFFF###FFFFFFFFFFFFFF##FFFFFFFFFFF#" },
-{ "#F#########################F###F#########################F#" },
-{ "#F#########################F###F#########################F#" },
-{ "#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF#" },
+{ "#                       ###########                       #" },
+{ "# ######### ########### ########### ########### ######### #" },
+{ "# ######### ########### ########### ########### ######### #" },
+{ "#                                                         #" },
+{ "# ######### ## ############################# ## ######### #" },
+{ "#           ## ############################# ##           #" },
+{ "########### ##              ###              ## ###########" },
+{ "########### ############### ### ############### ###########" },
+{ "########### ############### ### ############### ###########" },
+{ "########### ##                               ## ###########" },
+{ "########### ## #############---############# ## ###########" },
+{ "#              #XXXXXXXXXXXXXXXXXXXXXXXXXXX#              X" },
+{ "X              #XXXXXXXXXXXXXXXXXXXXXXXXXXX#              X" },
+{ "X              #XXXXXXXXXXXXXXXXXXXXXXXXXXX#              #" },
+{ "########### ## ############################# ## ###########" },
+{ "########### ##                               ## ###########" },
+{ "########### ## ############################# ## ###########" },
+{ "########### ## ############################# ## ###########" },
+{ "#                           ###                           #" },
+{ "# ######### ############### ### ############### ######### #" },
+{ "# ######### ############### ### ############### ######### #" },
+{ "#        ##                                     ##        #" },
+{ "######## ## ## ############################# ## ## ########" },
+{ "######## ## ## ############################# ## ## ########" },
+{ "#           ##              ###              ##           #" },
+{ "# ######################### ### ######################### #" },
+{ "# ######################### ### ######################### #" },
+{ "#                                                         #" },
 { "###########################################################" }
 }; // <-- CAUTION! Semicolon necessary!
 
@@ -142,7 +148,15 @@ public:
 		// 4. is the field free to move there?
 		if (whats_there != WALL_SYMBOL)
 		{
-			playfield[position.y][position.x] = ' ';
+			//Ghost won't eat spaces
+			if (playfield[dy][dx] != ' ' && playfield[dy][dx] != PACMAN_SYMBOL && playfield[dy][dx] != GHOST_SYMBOL)
+			{
+				playfield[position.y][position.x] = playfield[dy][dx];
+			}
+			else {
+				playfield[position.y][position.x] = EMPTY_SYMBOL;
+			}
+
 			position.x = dx;
 			position.y = dy;
 			playfield[position.y][position.x] = GHOST_SYMBOL;
@@ -239,8 +253,15 @@ void initialize()
 	{
 		for (int j = 0; j < W; j++)
 		{
-			if (playfield[i][j] == 'F')
+			if (playfield[i][j] == EMPTY_SYMBOL)
+			{
 				playfield[i][j] = FOOD_SYMBOL;
+			}
+			//Replace X with ' '
+			else if (playfield[i][j] == NO_SPAWN_SYMBOL) 
+			{
+				playfield[i][j] = EMPTY_SYMBOL;
+			}
 		}
 	}
 
@@ -296,15 +317,16 @@ void move_ghosts()
 
 void move_pacman()
 {
-	// 1. delete PacMan from old position
-	playfield[myPacMan.position.y][myPacMan.position.x] = ' ';
 
-	// 2. compute new desired coordinate (nx,ny)
+	// 1. compute new desired coordinate (nx,ny)
 	int nx = myPacMan.vx + myPacMan.position.x;
 	int ny = myPacMan.vy + myPacMan.position.y;
 
+	// 2. delete PacMan from old position, but only remove food.
+	playfield[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
+
 	// 3. test whether there is a wall at (nx,ny)  
-	if (playfield[ny][nx] == '#')
+	if (playfield[ny][nx] == WALL_SYMBOL || playfield[ny][nx] == DOOR_SYMBOL)
 	{
 		// Damn! There is a wall! Stop PacMan!
 		myPacMan.vx = 0;
@@ -319,7 +341,7 @@ void move_pacman()
 		collision_with_ghost = true;
 	else
 	{
-		if (playfield[ny][nx] == '.')
+		if (playfield[ny][nx] == FOOD_SYMBOL)
 		{
 			myPacMan.food_collected++;
 		}
@@ -362,7 +384,7 @@ void check_collisions()
 			x = 1 + rand() % (W - 1);
 			y = 1 + rand() % (H - 1);
 
-		} while ((playfield[y][x] != FOOD_SYMBOL) && (playfield[y][x] != ' '));
+		} while ((playfield[y][x] != FOOD_SYMBOL) && (playfield[y][x] != EMPTY_SYMBOL));
 
 		myPacMan.position.x = x;
 		myPacMan.position.y = y;
@@ -395,7 +417,7 @@ int main()
 	system("cls"); 
 	
 	//Resizes cmd window
-	system("MODE 61,33");
+	system("MODE 62,33");
 
 	//Disables resize and full screen.
 	HWND consoleWindow = GetConsoleWindow();
