@@ -1,0 +1,4 @@
+﻿  pacman.cpp
+c:\users\esteban\source\repos\pacman\pacman\pacman.cpp(191): warning C4838: conversion from 'int' to 'SHORT' requires a narrowing conversion
+c:\users\esteban\source\repos\pacman\pacman\pacman.cpp(287): warning C4018: '<': signed/unsigned mismatch
+  PacMan.vcxproj -> C:\Users\Esteban\source\repos\PacMan\Debug\PacMan.exe
