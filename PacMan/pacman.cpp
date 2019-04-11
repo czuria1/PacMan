@@ -31,6 +31,8 @@
 bool collision_with_ghost = false;
 bool game_over = false;
 
+int main();
+void resetGhosts();
 
 struct coord
 {
@@ -51,41 +53,74 @@ struct PacMan {
 
 
 struct PacMan myPacMan;
+char resetField[H + 1][W + 1];
 
 char playfield[H + 1][W + 1] =
 {
-{ "###########################################################" },
-{ "#                       ###########                       #" },
-{ "# ######### ########### ########### ########### ######### #" },
-{ "# ######### ########### ########### ########### ######### #" },
-{ "#                                                         #" },
-{ "# ######### ## ############################# ## ######### #" },
-{ "#           ## ############################# ##           #" },
-{ "########### ##              ###              ## ###########" },
-{ "########### ############### ### ############### ###########" },
-{ "########### ############### ### ############### ###########" },
-{ "########### ##                               ## ###########" },
-{ "########### ## #############---############# ## ###########" },
-{ "#              #XXXXXXXXXXXXXXXXXXXXXXXXXXX#              X" },
-{ "X              #XXXXXXXXXXXXXXXXXXXXXXXXXXX#              X" },
-{ "X              #XXXXXXXXXXXXXXXXXXXXXXXXXXX#              #" },
-{ "########### ## ############################# ## ###########" },
-{ "########### ##                               ## ###########" },
-{ "########### ## ############################# ## ###########" },
-{ "########### ## ############################# ## ###########" },
-{ "#                           ###                           #" },
-{ "# ######### ############### ### ############### ######### #" },
-{ "# ######### ############### ### ############### ######### #" },
-{ "#        ##                                     ##        #" },
-{ "######## ## ## ############################# ## ## ########" },
-{ "######## ## ## ############################# ## ## ########" },
-{ "#           ##              ###              ##           #" },
-{ "# ######################### ### ######################### #" },
-{ "# ######################### ### ######################### #" },
-{ "#                                                         #" },
-{ "###########################################################" }
+{ "############################################################" },
+{ "#                       ############                       #" },
+{ "# ######### ########### ############ ########### ######### #" },
+{ "# ######### ########### ############ ########### ######### #" },
+{ "#                                                          #" },
+{ "# ######### ## ############################## ## ######### #" },
+{ "#           ## ############################## ##           #" },
+{ "########### ##              ####              ## ###########" },
+{ "########### ############### #### ############### ###########" },
+{ "########### ############### #### ############### ###########" },
+{ "########### ##                                ## ###########" },
+{ "########### ## #---#########----#########---# ## ###########" },
+{ "#              #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#              X" },
+{ "X              #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#              X" },
+{ "X              #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#              #" },
+{ "########### ## ############################## ## ###########" },
+{ "########### ##                                ## ###########" },
+{ "########### ## ############################## ## ###########" },
+{ "########### ## ############################## ## ###########" },
+{ "#                           ####                           #" },
+{ "# ######### ############### #### ############### ######### #" },
+{ "# ######### ############### #### ############### ######### #" },
+{ "#        ##                                      ##        #" },
+{ "######## ## ## ############################## ## ## ########" },
+{ "######## ## ## ############################## ## ## ########" },
+{ "#           ##              ####              ##           #" },
+{ "# ######################### #### ######################### #" },
+{ "# ######################### #### ######################### #" },
+{ "#                                                          #" },
+{ "############################################################" }
 }; // <-- CAUTION! Semicolon necessary!
-
+char playfield2[H + 1][W + 1] =
+{
+{ "############################################################" },
+{ "#                       ############                       #" },
+{ "# ######### ########### ############ ########### ######### #" },
+{ "# ######### ########### ############ ########### ######### #" },
+{ "#                                                          #" },
+{ "# ######### ## ############################## ## ######### #" },
+{ "#           ## ############################## ##           #" },
+{ "########### ##              ####              ## ###########" },
+{ "########### ############### #### ############### ###########" },
+{ "########### ############### #### ############### ###########" },
+{ "########### ##                                ## ###########" },
+{ "########### ## #---#########----#########---# ## ###########" },
+{ "##             #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#             ##" },
+{ "##             #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#             ##" },
+{ "##             #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#             ##" },
+{ "########### ## ############################## ## ###########" },
+{ "########### ##                                ## ###########" },
+{ "########### ## ############################## ## ###########" },
+{ "########### ## ############################## ## ###########" },
+{ "#                           ####                           #" },
+{ "# ######### ############### #### ############### ######### #" },
+{ "# ######### ############### #### ############### ######### #" },
+{ "#        ##                                      ##        #" },
+{ "######## ## ## ############################## ## ## ########" },
+{ "######## ## ## ############################## ## ## ########" },
+{ "#           ##              ####              ##           #" },
+{ "# ######################### #### ######################### #" },
+{ "# ######################### #### ######################### #" },
+{ "#                                                          #" },
+{ "############################################################" }
+}; // <-- CAUTION! Semicolon necessary!
 /*
 { "############################################################" },
 { "#                                                          #" },
@@ -101,9 +136,9 @@ char playfield[H + 1][W + 1] =
 { "#                    #            #             #          #" },
 { "#########  ###########            ######  #######          #" },
 { "#                                                          #" },
-{ "#                     ###### M ######                      #" },
+{ "#                     ######   ######                      #" },
 { "#                     #             #                      #" },
-{ "                      #             #   MMMMMMMM            " },
+{ "#                     #             #                      #" },
 { "#                     #             #                      #" },
 { "#                     ###############                      #" },
 { "#                                                          #" },
@@ -127,6 +162,7 @@ public:
 		this->position.x = start_x;
 		this->position.y = start_y;
 		this->chasing = true;
+		//this->lastChar = ' ';
 		choose_random_direction();
 	}
 
@@ -138,28 +174,33 @@ public:
 
 		// 2. what is at this place where we plan to move the Ghost to?
 		char whats_there = playfield[dy][dx];
-
+		char whats_there2 = playfield2[dy][dx];
 		// 3. is it a PacMan?
 		if (whats_there == PACMAN_SYMBOL)
 		{
 			collision_with_ghost = true;
+			playfield[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
 		}
 
 		// 4. is the field free to move there?
-		if (whats_there != WALL_SYMBOL)
+		if (whats_there2 != WALL_SYMBOL)
 		{
+			/*
 			//Ghost won't eat spaces
 			if (playfield[dy][dx] != ' ' && playfield[dy][dx] != PACMAN_SYMBOL && playfield[dy][dx] != GHOST_SYMBOL)
 			{
-				playfield[position.y][position.x] = playfield[dy][dx];
+				//playfield[position.y][position.x] = lastChar;
 			}
 			else {
 				playfield[position.y][position.x] = EMPTY_SYMBOL;
 			}
+			*/
+			playfield2[position.y][position.x] = EMPTY_SYMBOL;
 
 			position.x = dx;
 			position.y = dy;
-			playfield[position.y][position.x] = GHOST_SYMBOL;
+			//lastChar = playfield[position.y][position.x];
+			playfield2[position.y][position.x] = GHOST_SYMBOL;
 		}
 		else
 		{
@@ -194,6 +235,7 @@ private:
 	int vx;
 	int vy;
 	bool chasing;
+	//char lastChar;
 };
 
 
@@ -225,22 +267,27 @@ void hidecursor()
 
 void add_new_ghost()
 {
-	// try to find a (x,y) coordinate randomly where a food piece is
+
 	int x, y;
+	// try to find a (x,y) coordinate randomly where a food piece is
+	/*
 	do
 	{
 		x = 1 + rand() % (W - 1);
 		y = 1 + rand() % (H - 1);
-
 	} while (playfield[y][x] != FOOD_SYMBOL);
-
+	*/
+	//Spawn inside the Box
+	x = rand() % (42 - 17 + 1) + 17;
+	y = rand() % (14 - 12 + 1) + 12;
 	allGhosts.push_back(new Ghost(x, y));
 }
 
 void initialize()
 {
-	myPacMan.position.x = 1;
-	myPacMan.position.y = 1;
+	//Starting position
+	myPacMan.position.x = 29;
+	myPacMan.position.y = 16;
 	myPacMan.vx = 0;
 	myPacMan.vy = 0;
 	myPacMan.food_collected = 0;
@@ -253,6 +300,7 @@ void initialize()
 	{
 		for (int j = 0; j < W; j++)
 		{
+			resetField[i][j] = playfield[i][j];
 			if (playfield[i][j] == EMPTY_SYMBOL)
 			{
 				playfield[i][j] = FOOD_SYMBOL;
@@ -261,13 +309,16 @@ void initialize()
 			else if (playfield[i][j] == NO_SPAWN_SYMBOL) 
 			{
 				playfield[i][j] = EMPTY_SYMBOL;
+				playfield2[i][j] = EMPTY_SYMBOL;
 			}
 		}
 	}
 
 	// 2. create some ghosts
-	for (int i = 0; i < NR_GHOSTS_START; i++)
+	for (int i = 0; i < NR_GHOSTS_START; i++) 
+	{
 		add_new_ghost();
+	}
 
 } // initialize
 
@@ -284,6 +335,22 @@ void user_input()
 			myPacMan.vy = 0;
 		}
 
+		if (c1 == 27)
+		{
+			exit(0);
+		}
+		if (c1 == 'g')
+		{
+			add_new_ghost();
+		}
+		if (c1 == 'k')
+		{
+			myPacMan.lives--;
+		}
+		if (c1 == 'r')
+		{
+			resetGhosts();
+		}
 		if (c1 == -32)
 		{
 			char c2 = _getch();
@@ -337,8 +404,10 @@ void move_pacman()
 	myPacMan.position.x += myPacMan.vx;
 	myPacMan.position.y += myPacMan.vy;
 
-	if (playfield[ny][nx] == GHOST_SYMBOL)
+	if (playfield2[ny][nx] == GHOST_SYMBOL) {
 		collision_with_ghost = true;
+		playfield[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
+	}
 	else
 	{
 		if (playfield[ny][nx] == FOOD_SYMBOL)
@@ -360,7 +429,14 @@ void show_playfield()
 	{
 		for (int j = 0; j < W; j++)
 		{
-			printf("%c", playfield[i][j]);
+			if(playfield2[i][j] == GHOST_SYMBOL)
+			{
+				printf("%c", playfield2[i][j]);
+			}
+			else 
+			{
+				printf("%c", playfield[i][j]);
+			}
 		}
 		printf("\n");
 	}
@@ -372,34 +448,81 @@ void check_collisions()
 	// did a collision between PacMan and Ghost happen?
 	if (collision_with_ghost)
 	{
-		collision_with_ghost = false;
-
+		set_cursor_position(W / 2 - 9, H / 2 - 3);
+		printf("   GAME START   ");
+		set_cursor_position(W / 2 - 8, H / 2 - 2);
 		myPacMan.lives--;
+		printf("   Lifes:%d   ", myPacMan.lives );
+		set_cursor_position(W / 2 - 8, H / 2 - 1);
+		printf("   Score:%d   ", myPacMan.food_collected);
+		collision_with_ghost = false;
+		Sleep(1500);
+		resetGhosts();
 
-
-		// try to find a new (x,y) PacMan start coordinate randomly 
 		int x, y;
+		x = 29;
+		y = 16;
+		// try to find a new (x,y) PacMan start coordinate randomly 
+		/*
 		do
 		{
 			x = 1 + rand() % (W - 1);
 			y = 1 + rand() % (H - 1);
 
 		} while ((playfield[y][x] != FOOD_SYMBOL) && (playfield[y][x] != EMPTY_SYMBOL));
-
+		*/
 		myPacMan.position.x = x;
 		myPacMan.position.y = y;
 		myPacMan.vx = 0;
 		myPacMan.vy = 0;
 
-		if (myPacMan.lives == 0)
+		if (myPacMan.lives <= 0) 
+		{
 			game_over = true;
+		}
 	}
 } // check_collisions
 
+void resetGame() 
+{
+	//Remove characters
+	for (int i = 0; i < H; i++)
+	{
+		for (int j = 0; j < W; j++)
+		{
+			playfield[i][j] = resetField[i][j];
+			if (playfield2[i][j] == GHOST_SYMBOL) {
+				playfield2[i][j] = EMPTY_SYMBOL;
+			}
+		}
+	}
+	collision_with_ghost = false;
+	game_over = false;
+	allGhosts.clear();
 
+	main();
+}
 
+void resetGhosts() {
 
+	allGhosts.clear();
+	//Remove characters
+	for (int i = 0; i < H; i++)
+	{
+		for (int j = 0; j < W; j++)
+		{
+			if (playfield2[i][j] == GHOST_SYMBOL) {
+				playfield2[i][j] = EMPTY_SYMBOL;
+			}
+		}
+	}
 
+	//Creates Ghosts
+	for (int i = 0; i < NR_GHOSTS_START; i++)
+	{
+		add_new_ghost();
+	}
+}
 int main()
 {
 	// set console to code page 437 https://en.wikipedia.org/wiki/Code_page_437
@@ -425,6 +548,21 @@ int main()
 
 	hidecursor();
 	initialize();
+	show_playfield();
+	set_cursor_position(W / 2 - 7, H / 2 - 3);
+	printf("   PAC-MAN   ");
+	set_cursor_position(W / 2 - 10, H / 2 - 1);
+	printf("   Press Any Key   ");
+	_getch();
+
+
+	set_cursor_position(W / 2 - 9, H / 2 - 3);
+	printf("                ");
+	set_cursor_position(W / 2 - 8, H / 2 - 2);
+	printf("   GAME START   ");
+	set_cursor_position(W / 2 - 8, H / 2 - 1);
+	printf("                ");
+	Sleep(1500);
 
 	int steps = 0;
 	while (!game_over)
@@ -448,16 +586,26 @@ int main()
 
 		if (myPacMan.food_collected == FOOD_TO_WIN)
 		{
-			set_cursor_position(W / 2 - 5, H / 2);
+			set_cursor_position(W / 2 - 9, H / 2 - 3);
+			printf("                ");
+			set_cursor_position(W / 2 - 8, H / 2 - 2);
 			printf("   YOU WON!   ");
-			Sleep(500);
+			set_cursor_position(W / 2 - 8, H / 2 - 1);
+			printf("                ");
+			Sleep(1500);
 			_getch();
-			exit(0);
+			resetGame();
 		}
 	}
 
-	set_cursor_position(W / 2 - 5, H / 2);
+	system("cls");
+	set_cursor_position(W / 2 - 9, H / 2 - 3);
+	printf("                ");
+	set_cursor_position(W / 2 - 8, H / 2 - 2);
 	printf("   GAME OVER!   ");
+	Sleep(1500);
+	set_cursor_position(W / 2 - 9, H / 2 + 10);
+	printf("   Press Any Key   ");
 	_getch();
-
+	resetGame();
 } // main
