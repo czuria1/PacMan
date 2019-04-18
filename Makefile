@@ -1,13 +1,11 @@
 # MPI
 
 # MPICC=/usr/lib64/mpich/bin/mpic++
-MPICC=-L/usr/lib64/openmpi/bin/mpic++ -lm
+MPICC=/usr/lib64/openmpi/bin/mpic++
 CURSES = -lncurses
-CC = g++
 
 pacman: pacman.cpp
-# 	${CC} ${MPICC} ${CURSES} pacman.cpp -o pacman -lm
-	${CC} pacman.cpp ${CURSES} ${MPICC}
+	${MPICC} ${CURSES} pacman.cpp -o pacman -lm
 
 clean:
-	rm pacman *.o *~
+	rm -f pacman core *~

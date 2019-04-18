@@ -871,11 +871,11 @@ void mpi () {
 int main(int argc, char** argv)
 {
     
-//    MPI_Init(&argc, &argv);                     // Initialize the MPI environment
-//    MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
-//    MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
-//
-//    mpi();
+    MPI_Init(NULL, NULL);                     // Initialize the MPI environment
+    MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
+    MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
+
+    mpi();
     
     // MPI Finish Code
     MPI_Finalize();
