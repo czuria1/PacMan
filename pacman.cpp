@@ -16,6 +16,7 @@
 #include <vector>
 #include <unistd.h>
 #include <signal.h>
+#include "mpi.h"
 
 #define H 30
 #define W 60
@@ -37,7 +38,6 @@ int foodToWin = 0;
 int xs = 120;
 int ys = 32;
 
-int main();
 void resetGhosts();
 void game(WINDOW *win);
 void art();
@@ -870,6 +870,16 @@ void mpi () {
 
 int main(int argc, char** argv)
 {
+    
+//    MPI_Init(&argc, &argv);                     // Initialize the MPI environment
+//    MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
+//    MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
+//
+//    mpi();
+    
+    // MPI Finish Code
+    MPI_Finalize();
+    
     WINDOW * win;
     if ((win = initscr()) == NULL) {
         printf("Can't load Curses!\n");
@@ -888,16 +898,6 @@ int main(int argc, char** argv)
     keypad(stdscr, true);
     game(win);
     endwin();
-    
-
-    MPI_Init(&argc, &argv);                     // Initialize the MPI environment
-    MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
-    MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
-    
-    mpi();
-    
-    // MPI Finish Code
-    MPI_Finalize();
     
     return 0;
     
