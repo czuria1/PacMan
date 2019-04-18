@@ -41,6 +41,9 @@
 
 int N = 64;
 
+// cpu holds my processor number, cpu=0 is master, rest are slaves// numcpus is the total number of processors
+int cpu, numcpus;
+
 //ncurses stuff
 int px, py;
 //WINDOW *wui;
@@ -829,6 +832,15 @@ int cpu, numcpus;
 // MPI function
 void mpi () {
     printf("MPI was called\n");
+    
+    int i, slave;
+    MPI_Status status;
+    
+    if (cpu == 0) {
+        
+    } else {
+        
+    }
 }
 
 int main(int argc, char** argv)
@@ -927,26 +939,21 @@ int main(int argc, char** argv)
 //    sleep(3);
 //    resetGame();
     
-    ///////////////////////////////////////////////////////////
-    // MPI Starter Code
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &cpu);
-    MPI_Comm_size(MPI_COMM_WORLD, &numcpus);
-    //////////////////////////////////////////////////////////
+
+    MPI_Init(&argc, &argv);                     // Initialize the MPI environment
+    MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
+    MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
     
     //////////////////////////////////////////////////////////////////////////////////
     // ONLY THE MASTER: Initialize the array, run the normal for loop, initialize MPI
     if (cpu == 0) {
-        // Master code
-//        initialize(a, N);
-//        // Test 1: Sequential For Loop
-//        init(a, N, "Normal");
-//        normal(a, N);
-//        finish(a, N, "Normal");
-//        // Test 2: MPI
-//        init(a, N, "MPI");
+        
     }
     /////////////////////////////////////////////////////////////////////////////////
     
     mpi();
+    
+    // MPI Finish Code
+    MPI_Finalize();
+    
 } // main
