@@ -24,7 +24,7 @@
 #include <stdbool.h>
 #include <vector>
 #include <unistd.h>
-//#include <curses.h>
+//#include <ncurses.h>
 #include <stdlib.h>
 #include "mpi.h"
 
@@ -38,6 +38,8 @@
 #define DOOR_SYMBOL '-'
 #define EMPTY_SYMBOL ' '
 #define NO_SPAWN_SYMBOL 'X'
+
+int N = 64;
 
 //ncurses stuff
 int px, py;
@@ -824,8 +826,9 @@ char ghostField[H + 1][W + 1] =
 // numcpus is the total number of processors
 int cpu, numcpus;
 
+// MPI function
 void mpi () {
-    printf("MPI was called");
+    printf("MPI was called\n");
 }
 
 int main(int argc, char** argv)
@@ -930,6 +933,20 @@ int main(int argc, char** argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &cpu);
     MPI_Comm_size(MPI_COMM_WORLD, &numcpus);
     //////////////////////////////////////////////////////////
+    
+    //////////////////////////////////////////////////////////////////////////////////
+    // ONLY THE MASTER: Initialize the array, run the normal for loop, initialize MPI
+    if (cpu == 0) {
+        // Master code
+//        initialize(a, N);
+//        // Test 1: Sequential For Loop
+//        init(a, N, "Normal");
+//        normal(a, N);
+//        finish(a, N, "Normal");
+//        // Test 2: MPI
+//        init(a, N, "MPI");
+    }
+    /////////////////////////////////////////////////////////////////////////////////
     
     mpi();
 } // main
