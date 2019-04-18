@@ -25,7 +25,8 @@
 #include <vector>
 #include <unistd.h>
 #include <curses.h>
-#include <stdlib.h> 
+#include <stdlib.h>
+#include "mpi.h"
 
 #define H 30
 #define W 60
