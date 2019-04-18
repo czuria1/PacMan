@@ -817,6 +817,11 @@ void resetGhosts() {
 		add_new_ghost();
 	}
 }
+
+void mpi () {
+    printf("MPI was called");
+}
+
 int main()
 {
 	// set console to code page 437 https://en.wikipedia.org/wiki/Code_page_437
@@ -832,84 +837,93 @@ int main()
 	*/
 
 	//system("cls"); 
-	clear();
-	wrefresh(wui);
-	refresh();
-	
-	//Resizes cmd window
-	//system("MODE 62,33");
-	
-
-	//Disables resize and full screen.
-	//HWND consoleWindow = GetConsoleWindow();
-	//SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
-
-	hidecursor();
-	initialize();
-	show_playfield();
-	set_cursor_position(W / 2 - 7, H / 2 - 3);
-	printw("   PAC-MAN   ");
-	set_cursor_position(W / 2 - 10, H / 2 - 1);
-	printw("   Press Any Key   ");
-	wrefresh(wui);
-	refresh();
-	wgetch(wui);
-
-
-	set_cursor_position(W / 2 - 9, H / 2 - 3);
-	printw("                ");
-	set_cursor_position(W / 2 - 8, H / 2 - 2);
-	printw("   GAME START   ");
-	set_cursor_position(W / 2 - 8, H / 2 - 1);
-	printw("                ");
-	wrefresh(wui);
-	refresh();
-	sleep(1);
-
-	int steps = 0;
-	while (!game_over)
-	{
-		move_ghosts();
-		show_playfield();
-		check_collisions();
-
-		user_input();
-		move_pacman();
-		show_playfield();
-		check_collisions();
-
-		//Sleep(5);
-		usleep(5000);
-
-		if (++steps % 100 == 0)
-		{
-			add_new_ghost();
-			show_playfield();
-		}
-
-		if (myPacMan.food_collected >= foodToWin)
-		{
-			set_cursor_position(W / 2 - 9, H / 2 - 3);
-			printw("                ");
-			set_cursor_position(W / 2 - 7, H / 2 - 2);
-			printw("   YOU WON!   ");
-			set_cursor_position(W / 2 - 8, H / 2 - 1);
-			printw("                ");
-			wrefresh(wui);
-			refresh();
-			sleep(2);
-			wgetch(wui);
-			resetGame();
-		}
-	}
-
-	clear();
-	set_cursor_position(W / 2 - 9, H / 2 - 3);
-	printw("                ");
-	set_cursor_position(W / 2 - 8, H / 2 - 2);
-	printw("   GAME OVER!   ");
-	wrefresh(wui);
-	refresh();
-	sleep(3);
-	resetGame();
+//    clear();
+//    wrefresh(wui);
+//    refresh();
+//
+//    //Resizes cmd window
+//    //system("MODE 62,33");
+//
+//
+//    //Disables resize and full screen.
+//    //HWND consoleWindow = GetConsoleWindow();
+//    //SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
+//
+//    hidecursor();
+//    initialize();
+//    show_playfield();
+//    set_cursor_position(W / 2 - 7, H / 2 - 3);
+//    printw("   PAC-MAN   ");
+//    set_cursor_position(W / 2 - 10, H / 2 - 1);
+//    printw("   Press Any Key   ");
+//    wrefresh(wui);
+//    refresh();
+//    wgetch(wui);
+//
+//
+//    set_cursor_position(W / 2 - 9, H / 2 - 3);
+//    printw("                ");
+//    set_cursor_position(W / 2 - 8, H / 2 - 2);
+//    printw("   GAME START   ");
+//    set_cursor_position(W / 2 - 8, H / 2 - 1);
+//    printw("                ");
+//    wrefresh(wui);
+//    refresh();
+//    sleep(1);
+//
+//    int steps = 0;
+//    while (!game_over)
+//    {
+//        move_ghosts();
+//        show_playfield();
+//        check_collisions();
+//
+//        user_input();
+//        move_pacman();
+//        show_playfield();
+//        check_collisions();
+//
+//        //Sleep(5);
+//        usleep(5000);
+//
+//        if (++steps % 100 == 0)
+//        {
+//            add_new_ghost();
+//            show_playfield();
+//        }
+//
+//        if (myPacMan.food_collected >= foodToWin)
+//        {
+//            set_cursor_position(W / 2 - 9, H / 2 - 3);
+//            printw("                ");
+//            set_cursor_position(W / 2 - 7, H / 2 - 2);
+//            printw("   YOU WON!   ");
+//            set_cursor_position(W / 2 - 8, H / 2 - 1);
+//            printw("                ");
+//            wrefresh(wui);
+//            refresh();
+//            sleep(2);
+//            wgetch(wui);
+//            resetGame();
+//        }
+//    }
+//
+//    clear();
+//    set_cursor_position(W / 2 - 9, H / 2 - 3);
+//    printw("                ");
+//    set_cursor_position(W / 2 - 8, H / 2 - 2);
+//    printw("   GAME OVER!   ");
+//    wrefresh(wui);
+//    refresh();
+//    sleep(3);
+//    resetGame();
+    
+    ///////////////////////////////////////////////////////////
+    // MPI Starter Code
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &cpu);
+    MPI_Comm_size(MPI_COMM_WORLD, &numcpus);
+    //////////////////////////////////////////////////////////
+    
+    mpi();
 } // main
