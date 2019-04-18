@@ -41,9 +41,6 @@
 
 int N = 64;
 
-// cpu holds my processor number, cpu=0 is master, rest are slaves// numcpus is the total number of processors
-int cpu, numcpus;
-
 //ncurses stuff
 int px, py;
 //WINDOW *wui;
@@ -833,13 +830,13 @@ int cpu, numcpus;
 void mpi () {
     printf("MPI was called\n");
     
-    int i, slave;
-    MPI_Status status;
-    
+//    int i, slave;
+//    MPI_Status status;
+
     if (cpu == 0) {
-        
+
     } else {
-        
+
     }
 }
 
@@ -943,13 +940,6 @@ int main(int argc, char** argv)
     MPI_Init(&argc, &argv);                     // Initialize the MPI environment
     MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
     MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
-    
-    //////////////////////////////////////////////////////////////////////////////////
-    // ONLY THE MASTER: Initialize the array, run the normal for loop, initialize MPI
-    if (cpu == 0) {
-        
-    }
-    /////////////////////////////////////////////////////////////////////////////////
     
     mpi();
     
