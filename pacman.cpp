@@ -860,44 +860,66 @@ void mpi () {
     
 //    int i, slave;
 //    MPI_Status status;
+//
+//    int numeach = NR_GHOSTS_START/numcpus;
+    
+    int number;
 
+    // Master process
     if (cpu == 0) {
-
-    } else {
-
+        number = -1;
+        MPI_Send(&number, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+    }
+    // Slave process
+    else {
+        MPI_Recv(&number, 1, MPI_INT, 0, 0, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
+        printf("Process 1 received number %d from process 0\n",
+               number);
     }
 }
 
 int main(int argc, char** argv)
 {
     
-    MPI_Init(NULL, NULL);                     // Initialize the MPI environment
+//    WINDOW * win;
+//    if ((win = initscr()) == NULL) {
+//        printf("Can't load Curses!\n");
+//        exit(EXIT_FAILURE);
+//    }
+////    win = newwin(120, 33, 0, 0);
+//    //Resizes cmd window
+//    //system("MODE 62,33"); //Windows
+//    //wresize(win, 62, 33); //Curses
+//    hidecursor();
+//    initialize();
+    
+    MPI_Init(&argc, &argv);                     // Initialize the MPI environment
     MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
     MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
-
-    mpi();
     
-    // MPI Finish Code
+    char hostname[MPI_MAX_PROCESSOR_NAME];
+    MPI_Get_processor_name(hostname, &cpu);
+    printf ("Hello from task %d on %s!\n", cpu, hostname);
+    
+    printf("Numcpus is: %d\n" , numcpus);
+    
+    if (cpu == 0)
+        printf("MASTER: Number of MPI tasks is: %d\n", numcpus);
     MPI_Finalize();
     
-    WINDOW * win;
-    if ((win = initscr()) == NULL) {
-        printf("Can't load Curses!\n");
-        exit(EXIT_FAILURE);
-    }
-    win = newwin(120, 33, 0, 0);
-    //Resizes cmd window
-    //system("MODE 62,33"); //Windows
-    //wresize(win, 62, 33); //Curses
-    hidecursor();
-    initialize();
-    cbreak();
-    noecho();
-    raw();
-    keypad(win, true);
-    keypad(stdscr, true);
-    game(win);
-    endwin();
+//    mpi();
+    
+//    cbreak();
+//    noecho();
+//    raw();
+//    keypad(win, true);
+//    keypad(stdscr, true);
+//    game(win);
+//    endwin();
+    
+    // MPI Finish Code
+//    MPI_Finalize();
     
     return 0;
     
