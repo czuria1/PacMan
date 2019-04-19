@@ -1,3 +1,14 @@
+
+/// Exercise: O6
+///
+/// file: PacMan_OOP.cpp
+///
+/// PacMan project with a Ghost class.
+///
+/// ---
+/// Prof. Dr.-Ing. J?rgen Brauer
+///
+
 ///
 /// Exercise: O6
 ///
@@ -9,12 +20,14 @@
 /// Prof. Dr.-Ing. J?rgen Brauer
 ///
 
-#include <stdio.h> // printf()
-#include <conio.h> // getch()
-#define _WIN32_WINNT 0x0500
-#include <windows.h>
+#include <curses.h>
+#include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <vector>
+#include <unistd.h>
+#include <signal.h>
+#include <mpi.h>
 
 #define H 30
 #define W 60
@@ -29,10 +42,19 @@
 
 bool collision_with_ghost = false;
 bool game_over = false;
+bool ghostMsg = false;
+bool firstTime = true;
+bool displayRight = true;
 int foodToWin = 0;
+int xs = 120;
+int ys = 32;
 
-int main();
+//int main();
 void resetGhosts();
+void game(WINDOW *win);
+void art();
+void playerDeath();
+using namespace std;
 
 struct coord
 {
@@ -179,14 +201,14 @@ public:
 		int dy = position.y + vy;
 
 		// 2. what is at this place where we plan to move the Ghost to?
-		char whats_there = playfield[dy][dx];
+		//char whats_there = playfield[dy][dx];
 		char whats_there2 = ghostField[dy][dx];
 		char whats_there3 = playerField[dy][dx];
 		// 3. is it a PacMan?
 		if (whats_there3 == PACMAN_SYMBOL)
 		{
 			collision_with_ghost = true;
-			playerField[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
+			playerDeath();
 		}
 
 		// 4. is the field free to move there?
@@ -214,18 +236,18 @@ public:
 			// field is not free, i.e. a wall:
 			// so do not move Ghost at all in this step, but
 			// randomly choose a new direction to move
-			choose_random_direction(); 
+			choose_random_direction();
 			//choose_smart_path();
 		}
 
 		// randomize behavior of the Ghost
-		if (rand() % 30 == 0) 
+		if (rand() % 20 == 0)
 		{
 
 			choose_random_direction();
 			//choose_smart_path();
 		}
-		
+
 	} // move
 
 
@@ -244,6 +266,7 @@ public:
 
 	void choose_smart_path()
 	{
+
 		/*
 		int r = rand() % 2;
 		//If Right
@@ -264,24 +287,24 @@ public:
 			}
 		}
 		*/
-		boolean canRight = false;
-		boolean canLeft = false;
-		boolean canDown = false;
-		boolean canUp = false;
-		//printf("      (%d,%d)       ",vx, vy);
+		bool canRight = false;
+		bool canLeft = false;
+		bool canDown = false;
+		bool canUp = false;
+		//printw("      (%d,%d)       ",vx, vy);
 		if (vx == 1)
 		{
-			if (ghostField[position.y+1][position.x] != WALL_SYMBOL) 
+			if (ghostField[position.y + 1][position.x] != WALL_SYMBOL)
 			{
 				//vx = 0; vy = 1;
 				canUp = true;
-			} 
-			if (ghostField[position.y-1][position.x] != WALL_SYMBOL) 
+			}
+			if (ghostField[position.y - 1][position.x] != WALL_SYMBOL)
 			{
 				//vx = 0; vy = -1;
 				canDown = true;
 			}
-			if (ghostField[position.y][position.x-1] != WALL_SYMBOL)
+			if (ghostField[position.y][position.x - 1] != WALL_SYMBOL)
 			{
 				//vx = -1; vy = 0;
 				canLeft = true;
@@ -289,12 +312,12 @@ public:
 		}
 		else if (vy == 1)
 		{
-			if (ghostField[position.y][position.x+1] != WALL_SYMBOL)
+			if (ghostField[position.y][position.x + 1] != WALL_SYMBOL)
 			{
 				//vx = 1; vy = 0;
 				canRight = true;
 			}
-			if (ghostField[position.y][position.x-1] != WALL_SYMBOL)
+			if (ghostField[position.y][position.x - 1] != WALL_SYMBOL)
 			{
 				//vx = -1; vy = 0;
 				canLeft = true;
@@ -307,12 +330,12 @@ public:
 		}
 		else if (vy == -1)
 		{
-			if (ghostField[position.y][position.x-1] != WALL_SYMBOL)
+			if (ghostField[position.y][position.x - 1] != WALL_SYMBOL)
 			{
 				//vx = -1; vy = 0;
 				canLeft = true;
 			}
-			if (ghostField[position.y][position.x+1] != WALL_SYMBOL)
+			if (ghostField[position.y][position.x + 1] != WALL_SYMBOL)
 			{
 				//vx = 1; vy = 0;
 				canRight = true;
@@ -323,7 +346,7 @@ public:
 				canUp = true;
 			}
 		}
-		else 
+		else
 		{
 			if (ghostField[position.y + 1][position.x] != WALL_SYMBOL)
 			{
@@ -341,9 +364,8 @@ public:
 				canRight = true;
 			}
 		}
-		boolean chosePath = false;
-		int r = rand() % 4;
-		while (!chosePath) 
+		bool chosePath = false;
+		while (!chosePath)
 		{
 			int r = rand() % 4;
 			switch (r)
@@ -360,17 +382,17 @@ public:
 				{
 					vx = 0;  vy = 1;
 					chosePath = true;
-				}  
+				}
 				break;
 			case 2:
 				if (canLeft)
 				{
 					vx = -1; vy = 0;
 					chosePath = true;
-				}  
+				}
 				break;
 			case 3:
-				if (canLeft)
+				if (canDown)
 				{
 					vx = 0; vy = -1;
 					chosePath = true;
@@ -393,27 +415,20 @@ private:
 
 std::vector<Ghost*> allGhosts;
 
-
-
-// Set cursor position in console
-// see http://www.dreamincode.net/forums/topic/153240-console-cursor-coordinates/ 
-void set_cursor_position(int x, int y)
+void set_cursor_position(int col, int row)
 {
-	//Initialize the coordinates
-	COORD coord = { x, y };
-	//Set the position
-	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
-
+	//os << "\033[" << col << ";" << row << "H";
+		//printw("\033[%dl;%dH", col, row);
+	move(row, col);
+	//wmove(win, col row);
+	refresh();
 } // set_cursor_position
 
 
 void hidecursor()
 {
-	HANDLE consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-	CONSOLE_CURSOR_INFO info;
-	info.dwSize = 100;
-	info.bVisible = FALSE;
-	SetConsoleCursorInfo(consoleHandle, &info);
+	//system("setterm -cursor off");
+	curs_set(0);
 }
 
 
@@ -433,9 +448,10 @@ void add_new_ghost()
 	x = rand() % (42 - 17 + 1) + 17;
 	y = rand() % (14 - 12 + 1) + 12;
 	allGhosts.push_back(new Ghost(x, y));
+	ghostMsg = true;
 }
 
-void initialize()
+/*void initialize()
 {
 	//Starting position
 	myPacMan.position.x = 29;
@@ -459,7 +475,7 @@ void initialize()
 				foodToWin++;
 			}
 			//Replace X with ' '
-			else if (playfield[i][j] == NO_SPAWN_SYMBOL) 
+			else if (playfield[i][j] == NO_SPAWN_SYMBOL)
 			{
 				playfield[i][j] = EMPTY_SYMBOL;
 				ghostField[i][j] = EMPTY_SYMBOL;
@@ -468,19 +484,32 @@ void initialize()
 	}
 
 	// 2. create some ghosts
-	for (int i = 0; i < NR_GHOSTS_START; i++) 
+	for (int i = 0; i < NR_GHOSTS_START; i++)
 	{
 		add_new_ghost();
 	}
+	refresh();
 
 } // initialize
+*/
+int kbhit(void)
+{
+	int ch = getch();
 
+	if (ch != ERR) {
+		ungetch(ch);
+		return 1;
+	}
+	else {
+		return 0;
+	}
+}
 
 void user_input()
 {
-	if (_kbhit())
+	if (kbhit())
 	{
-		char c1 = _getch();
+		char c1 = getch();
 		if (c1 == ' ')
 		{
 			// stop moving
@@ -490,6 +519,7 @@ void user_input()
 
 		if (c1 == 27)
 		{
+			endwin();
 			exit(0);
 		}
 		if (c1 == 'g')
@@ -504,26 +534,26 @@ void user_input()
 		{
 			resetGhosts();
 		}
-		if (c1 == 'w')
+		if (c1 == 'p')
 		{
 			myPacMan.food_collected = foodToWin;
 		}
-		if (c1 == -32)
-		{
-			char c2 = _getch();
-
-			//printf("c1=%d c2=%d\n", c1, c2);
-
+		if (c1 != ERR) {
 			myPacMan.vx = 0;
 			myPacMan.vy = 0;
-
-			switch (c2)
-			{
-			case 72: myPacMan.vy = -1; break; // cursor up
-			case 80: myPacMan.vy = +1; break; // cursor down
-			case 75: myPacMan.vx = -1; break; // cursor left
-			case 77: myPacMan.vx = +1; break; // cursor right                     
+			if (c1 == 3) {
+				myPacMan.vy = -1; // cursor up
 			}
+			else if (c1 == 2) {
+				myPacMan.vy = +1;  // cursor down
+			}
+			else if (c1 == 4) {
+				myPacMan.vx = -1;// cursor left
+			}
+			else if (c1 == 5) {
+				myPacMan.vx = +1; // cursor right
+			}
+
 		}
 
 	}
@@ -533,7 +563,7 @@ void user_input()
 void move_ghosts()
 {
 	// 1. move all Ghosts
-	for (int i = 0; i < allGhosts.size(); i++)
+	for (int i = 0; (unsigned)i < allGhosts.size(); i++)
 	{
 		allGhosts[i]->move();
 	}
@@ -549,7 +579,7 @@ void move_pacman()
 	// 2. delete PacMan from old position, but only remove food.
 	playerField[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
 
-	// 3. test whether there is a wall at (nx,ny)  
+	// 3. test whether there is a wall at (nx,ny)
 	if (playfield[ny][nx] == WALL_SYMBOL || playfield[ny][nx] == DOOR_SYMBOL)
 	{
 		// Damn! There is a wall! Stop PacMan!
@@ -563,7 +593,7 @@ void move_pacman()
 
 	if (ghostField[ny][nx] == GHOST_SYMBOL) {
 		collision_with_ghost = true;
-		playerField[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
+		playerDeath();
 	}
 	else
 	{
@@ -578,31 +608,48 @@ void move_pacman()
 	}
 
 } // move_pacman
+void infoDisplay() {
+	art();
+	mvprintw(12, 62, "Score:%3d ", myPacMan.food_collected);
+	mvprintw(13, 62, "Remaining:%3d ", foodToWin - myPacMan.food_collected);
+	mvprintw(14, 62, "Lives:%2d", myPacMan.lives);
+	//mvprintw(15, 62, "Displays:%2d %d %d", displayRight, LINES, COLS);
+	if (ghostMsg && !firstTime) {
+		mvprintw(17, 61, "New Ghost Added!");
+	}
+}
 
-
-void show_playfield()
+void show_playfield(int steps)
 {
 	set_cursor_position(0, 0);
 	for (int i = 0; i < H; i++)
 	{
 		for (int j = 0; j < W; j++)
 		{
-			if(ghostField[i][j] == GHOST_SYMBOL)
+			if (ghostField[i][j] == GHOST_SYMBOL)
 			{
-				printf("%c", ghostField[i][j]);
+				printw("%c", ghostField[i][j]);
 			}
-			else if (playerField[i][j] == PACMAN_SYMBOL) 
+			else if (playerField[i][j] == PACMAN_SYMBOL)
 			{
-				printf("%c", playerField[i][j]);
+				printw("%c", playerField[i][j]);
 			}
-			else 
+			else
 			{
-				printf("%c", playfield[i][j]);
+				printw("%c", playfield[i][j]);
 			}
 		}
-		printf("\n");
+		printw("\n");
 	}
-	printf("Score:%3d - Remaining:%3d - Lives:%2d\n", myPacMan.food_collected, foodToWin - myPacMan.food_collected, myPacMan.lives);
+	if (displayRight) {
+		infoDisplay();
+	}
+	if (steps % 10 == 0)
+	{
+		ghostMsg = false;
+		mvprintw(17, 61, "                 ");
+	}
+	refresh();
 }
 
 void check_collisions()
@@ -610,42 +657,36 @@ void check_collisions()
 	// did a collision between PacMan and Ghost happen?
 	if (collision_with_ghost)
 	{
+		mvprintw(myPacMan.position.y, myPacMan.position.x - 1, "(O)");
 		set_cursor_position(W / 2 - 9, H / 2 - 3);
-		printf("   GAME START   ");
+		printw("   GAME START   ");
 		set_cursor_position(W / 2 - 8, H / 2 - 2);
 		myPacMan.lives--;
-		printf("   Lifes:%d   ", myPacMan.lives );
+		printw("   Lifes:%d   ", myPacMan.lives);
 		set_cursor_position(W / 2 - 8, H / 2 - 1);
-		printf("   Score:%d   ", myPacMan.food_collected);
+		printw("   Score:%d   ", myPacMan.food_collected);
+		refresh();
 		collision_with_ghost = false;
-		Sleep(1500);
 		resetGhosts();
 
 		int x, y;
 		x = 29;
 		y = 16;
-		// try to find a new (x,y) PacMan start coordinate randomly 
-		/*
-		do
-		{
-			x = 1 + rand() % (W - 1);
-			y = 1 + rand() % (H - 1);
 
-		} while ((playfield[y][x] != FOOD_SYMBOL) && (playfield[y][x] != EMPTY_SYMBOL));
-		*/
 		myPacMan.position.x = x;
 		myPacMan.position.y = y;
 		myPacMan.vx = 0;
 		myPacMan.vy = 0;
 
-		if (myPacMan.lives <= 0) 
+		sleep(3);
+		if (myPacMan.lives <= 0)
 		{
 			game_over = true;
 		}
 	}
 } // check_collisions
 
-void resetGame() 
+void resetGame(WINDOW *win)
 {
 	//Remove characters
 	for (int i = 0; i < H; i++)
@@ -660,9 +701,12 @@ void resetGame()
 	}
 	collision_with_ghost = false;
 	game_over = false;
+	ghostMsg = false;
+	firstTime = true;
 	allGhosts.clear();
 	foodToWin = 0;
-	main();
+	//initialize(); //Call last, before game
+	game(win);
 }
 
 void resetGhosts() {
@@ -678,93 +722,235 @@ void resetGhosts() {
 			}
 		}
 	}
-
+	firstTime = true;
 	//Creates Ghosts
 	for (int i = 0; i < NR_GHOSTS_START; i++)
 	{
 		add_new_ghost();
 	}
 }
-int main()
+void resetWindow() {
+	endwin();
+	erase();
+	mvprintw(15, 20, "Game is still running! ");
+	mvprintw(16, 20, "Please Resize Window...");
+	refresh();
+}
+
+void do_resize()
 {
-	// set console to code page 437 https://en.wikipedia.org/wiki/Code_page_437
-	// and set font to "raster font"
-	/*
-	system("chcp 437");
-	for (int i=0; i<255; i++)
-	{
-	printf("%c", i);
-	if (i%25==0) printf("\n");
+	getmaxyx(stdscr, ys, xs);
+	if (ys < 32) {
+		resetWindow();
+		if (xs < 114) {
+			//resize_term(32, 61);
+			displayRight = false;
+		}
+		else {
+			//Fix for Windows OS
+			//resize_term(32, 120);
+			//displayRight = true;
+		}
 	}
-	_getch();
-	*/
+	else if (xs < 61) {
+		resetWindow();
+		//resize_term(32, 61);
+		displayRight = false;
+	}
+	else if (61 < xs && xs < 114) {
+		if (displayRight) {
+			resetWindow();
+			//resize_term(32, 61);
+			displayRight = false;
+		}
+	}
+	else {
+		//resize_term(32, 120);
+		displayRight = true;
+	}
+}
 
-	system("cls"); 
-	
-	//Resizes cmd window
-	system("MODE 62,33");
-
-	//Disables resize and full screen.
-	HWND consoleWindow = GetConsoleWindow();
-	SetWindowLong(consoleWindow, GWL_STYLE, GetWindowLong(consoleWindow, GWL_STYLE) & ~WS_MAXIMIZEBOX & ~WS_SIZEBOX);
-
-	hidecursor();
-	initialize();
-	show_playfield();
+void game(WINDOW *win) {
+	show_playfield(-1);
+	nodelay(stdscr, FALSE);
 	set_cursor_position(W / 2 - 7, H / 2 - 3);
-	printf("   PAC-MAN   ");
+	printw("   PAC-MAN   ");
 	set_cursor_position(W / 2 - 10, H / 2 - 1);
-	printf("   Press Any Key   ");
-	_getch();
-
-
+	printw("   Press Any Key   ");
+	refresh();
+	getch();
+	nodelay(stdscr, TRUE);
 	set_cursor_position(W / 2 - 9, H / 2 - 3);
-	printf("                ");
+	printw("                ");
 	set_cursor_position(W / 2 - 8, H / 2 - 2);
-	printf("   GAME START   ");
+	printw("   GAME START   ");
 	set_cursor_position(W / 2 - 8, H / 2 - 1);
-	printf("                ");
-	Sleep(1500);
+	printw("                ");
+	refresh();
+	sleep(3);
 
 	int steps = 0;
 	while (!game_over)
 	{
 		move_ghosts();
-		show_playfield();
 		check_collisions();
 
 		user_input();
 		move_pacman();
-		show_playfield();
+		show_playfield(-1);
 		check_collisions();
+		//do_resize();
 
-		//Sleep(5);
+		usleep(100000);
 
 		if (++steps % 100 == 0)
 		{
+			firstTime = false;
 			add_new_ghost();
-			show_playfield();
+			show_playfield(steps);
 		}
 
 		if (myPacMan.food_collected >= foodToWin)
 		{
 			set_cursor_position(W / 2 - 9, H / 2 - 3);
-			printf("                ");
+			printw("                ");
 			set_cursor_position(W / 2 - 7, H / 2 - 2);
-			printf("   YOU WON!   ");
+			printw("   YOU WON!   ");
 			set_cursor_position(W / 2 - 8, H / 2 - 1);
-			printf("                ");
-			Sleep(1500);
-			_getch();
-			resetGame();
+			printw("                ");
+			sleep(2);
+			getch();
+			resetGame(win);
+		}
+	}
+	erase();
+	set_cursor_position(W / 2 - 8, H / 2 - 2);
+	printw("   GAME OVER!   ");
+	refresh();
+	sleep(5);
+	resetGame(win);
+}
+
+void art() {
+	mvprintw(0, 61, "  _ __   __ _  ___ _ __ ___   __ _ _ __  ");
+	mvprintw(1, 61, " | '_ \\ / _` |/ __| '_ ` _ \\ / _` | '_ \\ ");
+	mvprintw(2, 61, " | |_) | (_| | (__| | | | | | (_| | | | |");
+	mvprintw(3, 61, " | .__/ \\__,_|\\___|_| |_| |_|\\__,_|_| |_|");
+	mvprintw(4, 61, " |_|                                     ");
+	mvprintw(5, 67, "CDA 4104 - Rams");
+	mvprintw(6, 61, "================================================.");
+	mvprintw(7, 61, "     .-.   .-.     .--.                         |");
+	mvprintw(8, 61, "    | OO| | OO|   / _.-' .-.   .-.  .-.   .''.  |");
+	mvprintw(9, 61, "    |   | |   |   \\  '-. '-'   '-'  '-'   '..'  |");
+	mvprintw(10, 61, "    '^^^' '^^^'    '--'                         |");
+	mvprintw(11, 61, "===============.  .-.  .================.  .-.  |");
+	mvprintw(12, 61, "               | |   | |                |  '-'  |");
+	mvprintw(13, 61, "               | |   | |                |       |");
+	mvprintw(14, 61, "               | ':-:' |                |  .-.  |");
+	mvprintw(15, 61, "               |  '-'  |                |  '-'  |");
+	mvprintw(16, 61, "==============='       '================'       |");
+	mvprintw(20, 61, "Code Base by Prof. Dr.-Ing. Jurgen Brauer");
+	mvprintw(21, 61, "Art Credit to '142' on asciiart.eu/video-games/pacman");
+	refresh();
+
+}
+
+void playerDeath() {
+	playerField[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
+}
+int main(int argc, char *argv[])
+{
+	//MPI Variables// Isumy
+	int countByProcess;            // Total amount of primes found 
+	double elapsedTime;              // Time to find primes 
+	int totalCount = 0;               /* Total number of solutions */
+	int i;
+	int idRank;                       // Process rank 
+	int processNumber;                // Number of processes
+	  /////////
+	WINDOW * win;
+	if ((win = initscr()) == NULL) {
+		printf("Can't load Curses!\n");
+		exit(EXIT_FAILURE);
+	}
+	win = newwin(120, 33, 0, 0);
+	//Resizes cmd window
+	//system("MODE 62,33"); //Windows
+	//wresize(win, 62, 33); //Curses
+	hidecursor();
+
+	//initialize();
+	//INITIAZING //
+
+	////MPI START //Isumy
+	MPI_Init(&argc, &argv);
+
+	MPI_Comm_rank(MPI_COMM_WORLD, &idRank);
+	MPI_Comm_size(MPI_COMM_WORLD, &processNumber);
+
+	// Timer starts
+	MPI_Barrier(MPI_COMM_WORLD);
+	elapsedTime = -MPI_Wtime();
+	//Starting position
+	myPacMan.position.x = 29;
+	myPacMan.position.y = 16;
+	myPacMan.vx = 0;
+	myPacMan.vy = 0;
+	myPacMan.food_collected = 0;
+	myPacMan.lives = 3;
+	myPacMan.chasing = false;
+
+	// 1. replace each empty field in the playfield
+	//    with a food field
+	for (int i = 0; i < H; i++)
+	{
+		for (int j = 0; j < W; j++)
+		{
+			resetField[i][j] = playfield[i][j];
+			if (playfield[i][j] == EMPTY_SYMBOL)
+			{
+				playfield[i][j] = FOOD_SYMBOL;
+				foodToWin++;
+			}
+			//Replace X with ' '
+			else if (playfield[i][j] == NO_SPAWN_SYMBOL)
+			{
+				playfield[i][j] = EMPTY_SYMBOL;
+				ghostField[i][j] = EMPTY_SYMBOL;
+			}
 		}
 	}
 
-	system("cls");
-	set_cursor_position(W / 2 - 9, H / 2 - 3);
-	printf("                ");
-	set_cursor_position(W / 2 - 8, H / 2 - 2);
-	printf("   GAME OVER!   ");
-	Sleep(2000);
-	resetGame();
-} // main
+	// 2. create some ghosts
+	for (int i = 0; i < NR_GHOSTS_START; i++)
+	{
+		add_new_ghost();
+	}
+	refresh();
+	//Calling function to reduce the number of prime founds
+	MPI_Reduce(&countByProcess, &totalCount, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
+	// Timer stops
+	elapsedTime += MPI_Wtime();
+
+
+	MPI_Finalize();
+
+	//Printing from Master process
+	if (idRank == 0)
+	{
+		printf("Master process execution time: %8.6f\n", elapsedTime);
+		fflush(stdout);
+	}
+	//END MPI
+	  //END OF INITIALIZINH
+	cbreak();
+	noecho();
+	raw();
+	keypad(win, true);
+	keypad(stdscr, true);
+	game(win);
+	endwin();
+
+	return 0;
+}
