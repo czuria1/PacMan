@@ -16,7 +16,7 @@
 #include <vector>
 #include <unistd.h>
 #include <signal.h>
-#include "mpi.h"
+#include <mpi.h>
 
 #define H 30
 #define W 60
@@ -894,18 +894,18 @@ int main(int argc, char** argv)
 //    hidecursor();
 //    initialize();
     
-    MPI_Init(&argc, &argv);                     // Initialize the MPI environment
-    MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
-    MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
+    numcpus = 4;
     
-    char hostname[MPI_MAX_PROCESSOR_NAME];
-    MPI_Get_processor_name(hostname, &cpu);
-    printf ("Hello from task %d on %s!\n", cpu, hostname);
+    MPI_Init(&argc, &argv);                     // Initialize the MPI environment
+    MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
+    MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
     
     printf("Numcpus is: %d\n" , numcpus);
+    printf("Rank: %d\n", cpu );
     
     if (cpu == 0)
         printf("MASTER: Number of MPI tasks is: %d\n", numcpus);
+    
     MPI_Finalize();
     
 //    mpi();
