@@ -9,6 +9,11 @@
 /// Prof. Dr.-Ing. J?rgen Brauer
 ///
 
+////////////////////////////////////////////////////////////////////
+// To run with different processors use:
+// /usr/lib64/openmpi/bin/mpirun -np {input # of processors} pacman
+///////////////////////////////////////////////////////////////////
+
 #include <curses.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -17,6 +22,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <mpi.h>
+#include <sys/time.h>
 
 #define H 30
 #define W 60
@@ -43,6 +49,8 @@ void game(WINDOW *win);
 void art();
 void playerDeath();
 using namespace std;
+
+struct timeval start, end;
 
 struct coord
 {
@@ -847,6 +855,26 @@ void playerDeath() {
     playerField[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
 }
 
+void starttime() {
+    gettimeofday( &start, 0 );
+}
+
+void endtime(const char* c) {
+    gettimeofday( &end, 0 );
+    double elapsed = ( end.tv_sec - start.tv_sec ) * 1000.0 + ( end.tv_usec - start.tv_usec ) / 1000.0;
+    printf("%s: %f ms\n", c, elapsed);
+}
+
+void init(const char* c) {
+    printf("***************** %s **********************\n", c);
+    starttime();
+}
+
+void finish(const char* c) {
+    endtime(c);
+    printf("***************************************************\n");
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MPI CODE
 //
@@ -882,6 +910,23 @@ void mpi () {
 int main(int argc, char** argv)
 {
     
+    MPI_Init(&argc, &argv);                     // Initialize the MPI environment
+    MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
+    MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
+    
+    printf("Numcpus is: %d\n" , numcpus);
+    printf("Rank: %d\n", cpu );
+    
+    // Master process code
+    if (cpu == 0) {
+        // Test 1: Sequential For Loop
+        init("Normal");
+        // SET original add ghost function here
+        finish("Normal");
+        // Test 2: MPI
+        init("MPI");
+    }
+    
 //    WINDOW * win;
 //    if ((win = initscr()) == NULL) {
 //        printf("Can't load Curses!\n");
@@ -894,17 +939,9 @@ int main(int argc, char** argv)
 //    hidecursor();
 //    initialize();
     
-    numcpus = 4;
-    
-    MPI_Init(&argc, &argv);                     // Initialize the MPI environment
-    MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
-    MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
-    
-    printf("Numcpus is: %d\n" , numcpus);
-    printf("Rank: %d\n", cpu );
-    
+    // print the time for the MPI implementation
     if (cpu == 0)
-        printf("MASTER: Number of MPI tasks is: %d\n", numcpus);
+        finish("MPI");
     
     MPI_Finalize();
     
