@@ -26,7 +26,6 @@
 
 #define H 30
 #define W 60
-#define NR_GHOSTS_START 5
 #define PACMAN_SYMBOL 'P'
 #define GHOST_SYMBOL  'G'
 #define FOOD_SYMBOL '.'
@@ -35,6 +34,7 @@
 #define EMPTY_SYMBOL ' '
 #define NO_SPAWN_SYMBOL 'X'
 
+int nr_ghosts_start = 0;
 bool collision_with_ghost = false;
 bool game_over = false;
 bool ghostMsg = false;
@@ -480,7 +480,7 @@ void initialize()
     }
     
     // 2. create some ghosts
-    for (int i = 0; i < NR_GHOSTS_START; i++)
+    for (int i = 0; i < nr_ghosts_start; i++)
     {
         add_new_ghost();
     }
@@ -720,7 +720,7 @@ void resetGhosts() {
     }
     firstTime = true;
     //Creates Ghosts
-    for (int i = 0; i < NR_GHOSTS_START; i++)
+    for (int i = 0; i < nr_ghosts_start; i++)
     {
         add_new_ghost();
     }
@@ -889,7 +889,7 @@ void mpi () {
 //    int i, slave;
 //    MPI_Status status;
 //
-//    int numeach = NR_GHOSTS_START/numcpus;
+//    int numeach = nr_ghosts_start/numcpus;
     
     int number;
 
@@ -914,7 +914,10 @@ int main(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
     MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
     
+    nr_ghosts_start = numcpus;
+    
     printf("Numcpus is: %d\n" , numcpus);
+    printf("nr_ghosts_start is: %d\n" , nr_ghosts_start);
     printf("Rank: %d\n", cpu );
     
     // Master process code
@@ -926,6 +929,8 @@ int main(int argc, char** argv)
         // Test 2: MPI
         init("MPI");
     }
+    
+//    mpi();
     
 //    WINDOW * win;
 //    if ((win = initscr()) == NULL) {
@@ -943,9 +948,8 @@ int main(int argc, char** argv)
     if (cpu == 0)
         finish("MPI");
     
+    // MPI Finish Code
     MPI_Finalize();
-    
-//    mpi();
     
 //    cbreak();
 //    noecho();
@@ -954,9 +958,6 @@ int main(int argc, char** argv)
 //    keypad(stdscr, true);
 //    game(win);
 //    endwin();
-    
-    // MPI Finish Code
-//    MPI_Finalize();
     
     return 0;
     
