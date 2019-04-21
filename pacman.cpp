@@ -955,8 +955,9 @@ void endtime(const char* c) {
     printf("%s: %f ms\n", c, elapsed);
 }
 
-void init(const char* c) {
+void init(int* a, int N, const char* c) {
     printf("***************** %s **********************\n", c);
+    setupGhostBuffer(a, N);
     starttime();
 }
 
@@ -967,6 +968,17 @@ void finish(const char* c) {
 
 int main(int argc, char** argv)
 {
+    
+    WINDOW * win;
+    if ((win = initscr()) == NULL) {
+        printf("Can't load Curses!\n");
+        exit(EXIT_FAILURE);
+    }
+    win = newwin(120, 33, 0, 0);
+    //        Resizes cmd window
+    //        system("MODE 62,33"); //Windows
+    //        wresize(win, 62, 33); //Curses
+    hidecursor();
     
     MPI_Init(&argc, &argv);                     // Initialize the MPI environment
     MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
@@ -981,44 +993,34 @@ int main(int argc, char** argv)
     if (cpu == 0) {
         // initialize the buffer of the number of ghosts for the game
         setupGhostBuffer(a, nr_ghosts_start);
-        printf("nr_ghosts_start is: %d\n" , nr_ghosts_start);
-        // Test 1: Sequential For Loop
-        init("Normal");
-        initialize();
-        // SET original add ghost function here
-        finish("Normal");
-        // Test 2: MPI
-        init("MPI");
+//        printf("nr_ghosts_start is: %d\n" , nr_ghosts_start);
+//        // Test 1: Sequential For Loop
+//        init(a, nr_ghosts_start, "Normal");
+//        initialize();
+//        // SET original add ghost function here
+//        finish("Normal");
+//        // Test 2: MPI
+//        init(a, nr_ghosts_start, "MPI");
     }
     
     initializeMPI(a, nr_ghosts_start);
     
-    //    WINDOW * win;
-    //    if ((win = initscr()) == NULL) {
-    //        printf("Can't load Curses!\n");
-    //        exit(EXIT_FAILURE);
-    //    }
-    ////    win = newwin(120, 33, 0, 0);
-    //    //Resizes cmd window
-    //    //system("MODE 62,33"); //Windows
-    //    //wresize(win, 62, 33); //Curses
-    //    hidecursor();
-    //    initialize();
+    //        initialize();
     
     // print the time for the MPI implementation
-    if (cpu == 0)
-        finish("MPI");
+//    if (cpu == 0)
+//        finish("MPI");
     
     // MPI Finish Code
     MPI_Finalize();
     
-    //    cbreak();
-    //    noecho();
-    //    raw();
-    //    keypad(win, true);
-    //    keypad(stdscr, true);
-    //    game(win);
-    //    endwin();
+        cbreak();
+        noecho();
+        raw();
+        keypad(win, true);
+        keypad(stdscr, true);
+        game(win);
+        endwin();
     
     return 0;
     
