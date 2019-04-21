@@ -463,30 +463,26 @@ void mpi (int* a, int N) {
     
     int numeach = N/numcpus;
     
+    int addedGhosts;
+    addedGhosts = 0;
+    
     // Master process
     if (cpu == 0) {
         // For each processor available,
-        // send the address of the ghost to be added to the board
-        for (slave = 1; slave < numcpus; slave++)
-            MPI_Send(&a[numeach*slave], numeach, MPI_INT, slave, 1, MPI_COMM_WORLD);
-        
-        for (i = 0; i < numeach; i++) {
-            add_new_ghost();
-            printf("Print new ghost: %d\n", i);
+        // collect the address of the ghost that was added to the board
+        add_new_ghost();
+        addedGhosts = 1;
+        for (slave = 1; slave < numcpus; slave++) {
+            MPI_Recv(&a[numeach*slave], numeach, MPI_INT, slave, 2, MPI_COMM_WORLD, &status);
+            addedGhosts++;
         }
         
-        for (slave = 1; slave < numcpus; slave++)
-            MPI_Recv(&a[numeach*slave], numeach, MPI_INT, slave, 2, MPI_COMM_WORLD, &status);
+        printf("Added ghosts: %d\n", addedGhosts);
     }
     // Slave process
     else {
         float data[numeach];
-        MPI_Recv(&data[0], numeach, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
-        printf("%d received ping_pong_count %d from %d\n",
-               cpu, data[0], 0);
-        for (i = 0; i < numeach; i++) {
-            add_new_ghost();
-        }
+        add_new_ghost();
         MPI_Send(&data[0], numeach, MPI_FLOAT, 0, 2, MPI_COMM_WORLD);
     }
 }
@@ -975,9 +971,6 @@ int main(int argc, char** argv)
     MPI_Init(&argc, &argv);                     // Initialize the MPI environment
     MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
     MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
-    
-    printf("Numcpus is: %d\n" , numcpus);
-    printf("Rank: %d\n", cpu );
     
     // initialize the number of ghosts for the game
     nr_ghosts_start = numcpus;
