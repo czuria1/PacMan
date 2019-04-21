@@ -447,6 +447,50 @@ void add_new_ghost()
     ghostMsg = true;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MPI CODE
+//
+// cpu holds my processor number, cpu=0 is master, rest are slaves
+// numcpus is the total number of processors
+int cpu, numcpus;
+
+// MPI function
+void mpi (int* a, int N) {
+    printf("MPI was called\n");
+    
+    int i, slave;
+    MPI_Status status;
+    
+    int numeach = N/numcpus;
+    
+    // Master process
+    if (cpu == 0) {
+        // For each processor available,
+        // send the address of the ghost to be added to the board
+        for (slave = 1; slave < numcpus; slave++)
+            MPI_Send(&a[numeach*slave], numeach, MPI_INT, slave, 1, MPI_COMM_WORLD);
+        
+        for (i = 0; i < numeach; i++) {
+            add_new_ghost();
+            printf("Print new ghost: %d\n", i);
+        }
+        
+        for (slave = 1; slave < numcpus; slave++)
+            MPI_Recv(&a[numeach*slave], numeach, MPI_INT, slave, 2, MPI_COMM_WORLD, &status);
+    }
+    // Slave process
+    else {
+        float data[numeach];
+        MPI_Recv(&data[0], numeach, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+        printf("%d received ping_pong_count %d from %d\n",
+               cpu, data[0], 0);
+        for (i = 0; i < numeach; i++) {
+            add_new_ghost();
+        }
+        MPI_Send(&data[0], numeach, MPI_FLOAT, 0, 2, MPI_COMM_WORLD);
+    }
+}
+
 void initialize()
 {
     //Starting position
@@ -479,11 +523,54 @@ void initialize()
         }
     }
     
-    // 2. create some ghosts
+    //     2. create some ghosts
     for (int i = 0; i < nr_ghosts_start; i++)
     {
         add_new_ghost();
+        printf("Print new ghost: %d\n", i);
     }
+    refresh();
+    
+} // initialize
+
+void initializeMPI(int* a, int N)
+{
+    //Starting position
+    myPacMan.position.x = 29;
+    myPacMan.position.y = 16;
+    myPacMan.vx = 0;
+    myPacMan.vy = 0;
+    myPacMan.food_collected = 0;
+    myPacMan.lives = 3;
+    myPacMan.chasing = false;
+    
+    // 1. replace each empty field in the playfield
+    //    with a food field
+    for (int i = 0; i < H; i++)
+    {
+        for (int j = 0; j < W; j++)
+        {
+            resetField[i][j] = playfield[i][j];
+            if (playfield[i][j] == EMPTY_SYMBOL)
+            {
+                playfield[i][j] = FOOD_SYMBOL;
+                foodToWin++;
+            }
+            //Replace X with ' '
+            else if (playfield[i][j] == NO_SPAWN_SYMBOL)
+            {
+                playfield[i][j] = EMPTY_SYMBOL;
+                ghostField[i][j] = EMPTY_SYMBOL;
+            }
+        }
+    }
+    
+    // 2. create some ghosts
+    //    for (int i = 0; i < nr_ghosts_start; i++)
+    //    {
+    //        add_new_ghost();
+    //    }
+    mpi(a, N);
     refresh();
     
 } // initialize
@@ -855,6 +942,13 @@ void playerDeath() {
     playerField[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
 }
 
+void setupGhostBuffer(int *a, int N) {
+    int i;
+    for (i = 0; i < N; ++i) {
+        a[i] = i;
+    }
+}
+
 void starttime() {
     gettimeofday( &start, 0 );
 }
@@ -875,38 +969,6 @@ void finish(const char* c) {
     printf("***************************************************\n");
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MPI CODE
-//
-// cpu holds my processor number, cpu=0 is master, rest are slaves
-// numcpus is the total number of processors
-int cpu, numcpus;
-
-// MPI function
-void mpi () {
-    printf("MPI was called\n");
-    
-//    int i, slave;
-//    MPI_Status status;
-//
-//    int numeach = nr_ghosts_start/numcpus;
-    
-    int number;
-
-    // Master process
-    if (cpu == 0) {
-        number = -1;
-        MPI_Send(&number, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
-    }
-    // Slave process
-    else {
-        MPI_Recv(&number, 1, MPI_INT, 0, 0, MPI_COMM_WORLD,
-                 MPI_STATUS_IGNORE);
-        printf("Process 1 received number %d from process 0\n",
-               number);
-    }
-}
-
 int main(int argc, char** argv)
 {
     
@@ -914,35 +976,41 @@ int main(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
     MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
     
+    printf("Numcpus is: %d\n" , numcpus);
+    printf("Rank: %d\n", cpu );
+    
+    // initialize the number of ghosts for the game
     nr_ghosts_start = numcpus;
     
-    printf("Numcpus is: %d\n" , numcpus);
-    printf("nr_ghosts_start is: %d\n" , nr_ghosts_start);
-    printf("Rank: %d\n", cpu );
+    int a[nr_ghosts_start];
     
     // Master process code
     if (cpu == 0) {
+        // initialize the buffer of the number of ghosts for the game
+        setupGhostBuffer(a, nr_ghosts_start);
+        printf("nr_ghosts_start is: %d\n" , nr_ghosts_start);
         // Test 1: Sequential For Loop
         init("Normal");
+        initialize();
         // SET original add ghost function here
         finish("Normal");
         // Test 2: MPI
         init("MPI");
     }
     
-//    mpi();
+    initializeMPI(a, nr_ghosts_start);
     
-//    WINDOW * win;
-//    if ((win = initscr()) == NULL) {
-//        printf("Can't load Curses!\n");
-//        exit(EXIT_FAILURE);
-//    }
-////    win = newwin(120, 33, 0, 0);
-//    //Resizes cmd window
-//    //system("MODE 62,33"); //Windows
-//    //wresize(win, 62, 33); //Curses
-//    hidecursor();
-//    initialize();
+    //    WINDOW * win;
+    //    if ((win = initscr()) == NULL) {
+    //        printf("Can't load Curses!\n");
+    //        exit(EXIT_FAILURE);
+    //    }
+    ////    win = newwin(120, 33, 0, 0);
+    //    //Resizes cmd window
+    //    //system("MODE 62,33"); //Windows
+    //    //wresize(win, 62, 33); //Curses
+    //    hidecursor();
+    //    initialize();
     
     // print the time for the MPI implementation
     if (cpu == 0)
@@ -951,13 +1019,13 @@ int main(int argc, char** argv)
     // MPI Finish Code
     MPI_Finalize();
     
-//    cbreak();
-//    noecho();
-//    raw();
-//    keypad(win, true);
-//    keypad(stdscr, true);
-//    game(win);
-//    endwin();
+    //    cbreak();
+    //    noecho();
+    //    raw();
+    //    keypad(win, true);
+    //    keypad(stdscr, true);
+    //    game(win);
+    //    endwin();
     
     return 0;
     
