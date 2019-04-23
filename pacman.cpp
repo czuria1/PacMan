@@ -43,6 +43,7 @@ bool displayRight = true;
 int foodToWin = 0;
 int xs = 120;
 int ys = 32;
+int doPrint = 1;
 
 void resetGhosts();
 void game(WINDOW *win);
@@ -470,20 +471,32 @@ void mpi (int* a, int N) {
     if (cpu == 0) {
         // For each processor available,
         // collect the address of the ghost that was added to the board
-        add_new_ghost();
-        addedGhosts = 1;
-        for (slave = 1; slave < numcpus; slave++) {
-            MPI_Recv(&a[numeach*slave], numeach, MPI_INT, slave, 2, MPI_COMM_WORLD, &status);
-            addedGhosts++;
-        }
+//        add_new_ghost();
+//        addedGhosts = 1;
+//        for (slave = 1; slave < numcpus; slave++) {
+//            MPI_Recv(&a[numeach*slave], numeach, MPI_INT, slave, 2, MPI_COMM_WORLD, &status);
+//            addedGhosts++;
+//        }
         
-        printf("Added ghosts: %d\n", addedGhosts);
+        for (slave = 1; slave < numcpus; slave++)
+            MPI_Send(&a[numeach*slave], numeach, MPI_INT, slave, 1, MPI_COMM_WORLD);
+        
+        for (i = 0; i < numeach; i++)
+            add_new_ghost();
+        
+        
+        for (slave = 1; slave < numcpus; slave++)
+            MPI_Recv(&a[numeach*slave], numeach, MPI_INT, slave, 2, MPI_COMM_WORLD, &status);
+        
+//        printf("Added ghosts: %d\n", addedGhosts);
     }
     // Slave process
     else {
         float data[numeach];
-        add_new_ghost();
-        MPI_Send(&data[0], numeach, MPI_FLOAT, 0, 2, MPI_COMM_WORLD);
+        MPI_Recv(&data[0], numeach, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+        for (i = 0; i < numeach; i++)
+            add_new_ghost();
+        MPI_Send(&data[0], numeach, MPI_INT, 0, 2, MPI_COMM_WORLD);
     }
 }
 
@@ -945,6 +958,15 @@ void setupGhostBuffer(int *a, int N) {
     }
 }
 
+void print(int* a, int N) {
+    if (doPrint) {
+        int i;
+        for (i = 0; i < N; ++i)
+            printf("%d ", (int) a[i]);
+        printf("\n");
+    }
+}
+
 void starttime() {
     gettimeofday( &start, 0 );
 }
@@ -961,34 +983,30 @@ void init(int* a, int N, const char* c) {
     starttime();
 }
 
-void finish(const char* c) {
+void finish(int* a, int N, const char* c) {
     endtime(c);
     printf("***************************************************\n");
 }
 
 int main(int argc, char** argv)
 {
-    
+    MPI_Init(&argc, &argv);                     // Initialize the MPI environment
+    MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
+    MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
+
     WINDOW * win;
     if ((win = initscr()) == NULL) {
         printf("Can't load Curses!\n");
         exit(EXIT_FAILURE);
     }
     win = newwin(120, 33, 0, 0);
-    //        Resizes cmd window
-    //        system("MODE 62,33"); //Windows
-    //        wresize(win, 62, 33); //Curses
     hidecursor();
-    
-    MPI_Init(&argc, &argv);                     // Initialize the MPI environment
-    MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
-    MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
-    
+
     // initialize the number of ghosts for the game
     nr_ghosts_start = numcpus;
-    
+
     int a[nr_ghosts_start];
-    
+
     // Master process code
     if (cpu == 0) {
         // initialize the buffer of the number of ghosts for the game
@@ -998,29 +1016,27 @@ int main(int argc, char** argv)
 //        init(a, nr_ghosts_start, "Normal");
 //        initialize();
 //        // SET original add ghost function here
-//        finish("Normal");
+//        finish(a, nr_ghosts_start, "Normal");
 //        // Test 2: MPI
 //        init(a, nr_ghosts_start, "MPI");
     }
-    
+
     initializeMPI(a, nr_ghosts_start);
     
-    //        initialize();
-    
-    // print the time for the MPI implementation
 //    if (cpu == 0)
-//        finish("MPI");
+//        finish(a, nr_ghosts_start, "MPI");
     
-    // MPI Finish Code
     MPI_Finalize();
-    
-        cbreak();
-        noecho();
-        raw();
-        keypad(win, true);
-        keypad(stdscr, true);
-        game(win);
-        endwin();
+
+//    initialize();
+    cbreak();
+    noecho();
+    raw();
+    keypad(win, true);
+    keypad(stdscr, true);
+    game(win);
+    endwin();
+
     
     return 0;
     
