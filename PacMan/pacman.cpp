@@ -9,6 +9,21 @@
 /// Prof. Dr.-Ing. J?rgen Brauer
 ///
 
+////////////////////////////////////////////////////////////////////
+// To run with different processors use:
+// /usr/lib64/openmpi/bin/mpirun -np {input # of processors} pacman
+///////////////////////////////////////////////////////////////////
+#ifdef _WIN32
+#define H2 30
+#define W2 120
+#elif linux
+#define H2 33
+#define W2 120
+#else
+#define H2 33
+#define W2 120
+#endif
+
 #include <curses.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -16,10 +31,11 @@
 #include <vector>
 #include <unistd.h>
 #include <signal.h>
+#include <mpi.h>
+#include <sys/time.h>
 
 #define H 30
 #define W 60
-#define NR_GHOSTS_START 5
 #define PACMAN_SYMBOL 'P'
 #define GHOST_SYMBOL  'G'
 #define FOOD_SYMBOL '.'
@@ -27,7 +43,9 @@
 #define DOOR_SYMBOL '-'
 #define EMPTY_SYMBOL ' '
 #define NO_SPAWN_SYMBOL 'X'
+#define LOGIC_SYMBOL 'A'
 
+int nr_ghosts_start = 0;
 bool collision_with_ghost = false;
 bool game_over = false;
 bool ghostMsg = false;
@@ -36,13 +54,16 @@ bool displayRight = true;
 int foodToWin = 0;
 int xs = 120;
 int ys = 32;
+int doPrint = 1;
+time_t timer;
 
-int main();
 void resetGhosts();
 void game(WINDOW *win);
 void art();
 void playerDeath();
 using namespace std;
+
+struct timeval start, stop;
 
 struct coord
 {
@@ -71,104 +92,107 @@ char playerField[H + 1][W + 1];
 //Will hold food and display all characters
 char playfield[H + 1][W + 1] =
 {
-{ "############################################################" },
-{ "#                       ############                       #" },
-{ "# ######### ########### ############ ########### ######### #" },
-{ "# ######### ########### ############ ########### ######### #" },
-{ "#                                                          #" },
-{ "# ######### ## ############################## ## ######### #" },
-{ "#           ## ############################## ##           #" },
-{ "########### ##              ####              ## ###########" },
-{ "########### ############### #### ############### ###########" },
-{ "########### ############### #### ############### ###########" },
-{ "########### ##                                ## ###########" },
-{ "########### ## #---#########----#########---# ## ###########" },
-{ "#              #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#              X" },
-{ "X              #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#              X" },
-{ "X              #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#              #" },
-{ "########### ## ############################## ## ###########" },
-{ "########### ##                                ## ###########" },
-{ "########### ## ############################## ## ###########" },
-{ "########### ## ############################## ## ###########" },
-{ "#                           ####                           #" },
-{ "# ######### ############### #### ############### ######### #" },
-{ "# ######### ############### #### ############### ######### #" },
-{ "#        ##                                      ##        #" },
-{ "######## ## ## ############################## ## ## ########" },
-{ "######## ## ## ############################## ## ## ########" },
-{ "#           ##              ####              ##           #" },
-{ "# ######################### #### ######################### #" },
-{ "# ######################### #### ######################### #" },
-{ "#                                                          #" },
-{ "############################################################" }
+	{ "############################################################" },
+	{ "#                       ############                       #" },
+	{ "# ######### ########### ############ ########### ######### #" },
+	{ "# ######### ########### ############ ########### ######### #" },
+	{ "#                                                          #" },
+	{ "# ######### ## ############################## ## ######### #" },
+	{ "#           ## ############################## ##           #" },
+	{ "########### ##              ####              ## ###########" },
+	{ "########### ############### #### ############### ###########" },
+	{ "########### ############### #### ############### ###########" },
+	{ "########### ##                                ## ###########" },
+	{ "########### ## #---#########----#########---# ## ###########" },
+	{ "#              #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#              X" },
+	{ "X              #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#              X" },
+	{ "X              #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#              #" },
+	{ "########### ## ############################## ## ###########" },
+	{ "########### ##                                ## ###########" },
+	{ "########### ## ############################## ## ###########" },
+	{ "########### ## ############################## ## ###########" },
+	{ "#                           ####                           #" },
+	{ "# ######### ############### #### ############### ######### #" },
+	{ "# ######### ############### #### ############### ######### #" },
+	{ "#        ##                                      ##        #" },
+	{ "######## ## ## ############################## ## ## ########" },
+	{ "######## ## ## ############################## ## ## ########" },
+	{ "#           ##              ####              ##           #" },
+	{ "# ######################### #### ######################### #" },
+	{ "# ######################### #### ######################### #" },
+	{ "#                                                          #" },
+	{ "############################################################" }
 }; // <-- CAUTION! Semicolon necessary!
 
 //Ghost layer
 char ghostField[H + 1][W + 1] =
 {
+	{ "############################################################" },
+	{ "#                       ############                       #" },
+	{ "# ######### ########### ############ ########### ######### #" },
+	{ "# ######### ########### ############ ########### ######### #" },
+	{ "#                                                          #" },
+	{ "# ######### ## ############################## ## ######### #" },
+	{ "#           ## ############################## ##           #" },
+	{ "########### ##              ####              ## ###########" },
+	{ "########### ############### #### ############### ###########" },
+	{ "########### ############### #### ############### ###########" },
+	{ "########### ##                                ## ###########" },
+	{ "########### ## #---#########----#########---# ## ###########" },
+	{ "##             #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#             ##" },
+	{ "##             #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#             ##" },
+	{ "##             #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#             ##" },
+	{ "########### ## ############################## ## ###########" },
+	{ "########### ##                                ## ###########" },
+	{ "########### ## ############################## ## ###########" },
+	{ "########### ## ############################## ## ###########" },
+	{ "#                           ####                           #" },
+	{ "# ######### ############### #### ############### ######### #" },
+	{ "# ######### ############### #### ############### ######### #" },
+	{ "#        ##                                      ##        #" },
+	{ "######## ## ## ############################## ## ## ########" },
+	{ "######## ## ## ############################## ## ## ########" },
+	{ "#           ##              ####              ##           #" },
+	{ "# ######################### #### ######################### #" },
+	{ "# ######################### #### ######################### #" },
+	{ "#                                                          #" },
+	{ "############################################################" }
+}; // <-- CAUTION! Semicolon necessary!
+
+//Logic layer
+char decisionField[H + 1][W + 1] =
+{
 { "############################################################" },
-{ "#                       ############                       #" },
+{ "#          A            ############            A          #" },
 { "# ######### ########### ############ ########### ######### #" },
 { "# ######### ########### ############ ########### ######### #" },
-{ "#                                                          #" },
-{ "# ######### ## ############################## ## ######### #" },
-{ "#           ## ############################## ##           #" },
+{ "#          A  A        A            A        A  A         A#" },
+{ "#A######### ## ############################## ## ######### #" },
+{ "#          A## ############################## ##A          #" },
 { "########### ##              ####              ## ###########" },
 { "########### ############### #### ############### ###########" },
 { "########### ############### #### ############### ###########" },
-{ "########### ##                                ## ###########" },
-{ "########### ## #---#########----#########---# ## ###########" },
-{ "##             #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#             ##" },
-{ "##             #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#             ##" },
-{ "##             #XXXXXXXXXXXXXXXXXXXXXXXXXXXX#             ##" },
+{ "########### ##             A    A             ## ###########" },
+{ "########### ## #   #########    #########   # ## ###########" },
+{ "##         A  A#                            #A  A         ##" },
+{ "##         A  A#                            #A  A         ##" },
+{ "##         A  A#                            #A  A         ##" },
 { "########### ## ############################## ## ###########" },
-{ "########### ##                                ## ###########" },
+{ "########### ##A                              A## ###########" },
 { "########### ## ############################## ## ###########" },
 { "########### ## ############################## ## ###########" },
-{ "#                           ####                           #" },
+{ "#          A  A             ####             A  A          #" },
 { "# ######### ############### #### ############### ######### #" },
 { "# ######### ############### #### ############### ######### #" },
-{ "#        ##                                      ##        #" },
+{ "#        ##A  A            A    A            A  A##        #" },
 { "######## ## ## ############################## ## ## ########" },
 { "######## ## ## ############################## ## ## ########" },
-{ "#           ##              ####              ##           #" },
+{ "#       A   ##              ####              ##   A       #" },
 { "# ######################### #### ######################### #" },
 { "# ######################### #### ######################### #" },
-{ "#                                                          #" },
+{ "#                          A    A                          #" },
 { "############################################################" }
 }; // <-- CAUTION! Semicolon necessary!
-/*
-{ "############################################################" },
-{ "#                                                          #" },
-{ "# ########  ######## #            ###############          #" },
-{ "# ########         # #            #                        #" },
-{ "#              ### # #            # ####### #####          #" },
-{ "# #            # # # #            #                        #" },
-{ "# # ########   # # # #            ### ###########          #" },
-{ "# # # #    #   # # # #            # # #         #          #" },
-{ "# # # #### #   # # # #            # # # ####### #          #" },
-{ "# #        #   #   # #            # # #       # #          #" },
-{ "# ##########  ###### #            # # ######### #          #" },
-{ "#                    #            #             #          #" },
-{ "#########  ###########            ######  #######          #" },
-{ "#                                                          #" },
-{ "#                     ######   ######                      #" },
-{ "#                     #             #                      #" },
-{ "#                     #             #                      #" },
-{ "#                     #             #                      #" },
-{ "#                     ###############                      #" },
-{ "#                                                          #" },
-{ "# ########    ############    ############  ############   #" },
-{ "# ########                                             #   #" },
-{ "#        #########  ######    ######################## #   #" },
-{ "######## ###             #    #                      # #   #" },
-{ "######## ###             #    #  #                   # #   #" },
-{ "#        ###             #    #  ##################### #   #" },
-{ "# ################            #                        #   #" },
-{ "# ################                     #################   #" },
-{ "#                            #                             #" },
-{ "#############################M##############################" }
-*/
 class Ghost {
 
 public:
@@ -178,7 +202,6 @@ public:
 		this->position.x = start_x;
 		this->position.y = start_y;
 		this->chasing = true;
-		//this->lastChar = ' ';
 		choose_random_direction();
 	}
 
@@ -198,199 +221,238 @@ public:
 			collision_with_ghost = true;
 			playerDeath();
 		}
-
 		// 4. is the field free to move there?
-		if (whats_there2 != WALL_SYMBOL)
+		if (whats_there2 != WALL_SYMBOL && decisionField[position.y][position.x] != LOGIC_SYMBOL)
 		{
-			/*
-			//Ghost won't eat spaces
-			if (playfield[dy][dx] != ' ' && playfield[dy][dx] != PACMAN_SYMBOL && playfield[dy][dx] != GHOST_SYMBOL)
-			{
-				//playfield[position.y][position.x] = lastChar;
-			}
-			else {
-				playfield[position.y][position.x] = EMPTY_SYMBOL;
-			}
-			*/
 			ghostField[position.y][position.x] = EMPTY_SYMBOL;
-
 			position.x = dx;
 			position.y = dy;
-			//lastChar = playfield[position.y][position.x];
 			ghostField[position.y][position.x] = GHOST_SYMBOL;
 		}
 		else
 		{
-			// field is not free, i.e. a wall:
-			// so do not move Ghost at all in this step, but
-			// randomly choose a new direction to move
-			choose_random_direction();
-			//choose_smart_path();
-		}
+			double duration = difftime(time(0L), timer);
+			if (duration < 7) {
+				//chase();
+				scatter();
+			}
+			else {
+				if (duration > 20) {
+					timer = time(0L);
+				}
+				chase();
+			}
 
-		// randomize behavior of the Ghost
-		if (rand() % 20 == 0)
-		{
-
-			choose_random_direction();
-			//choose_smart_path();
 		}
 
 	} // move
-
 
 	void choose_random_direction()
 	{
 		int r = rand() % 4;
 		switch (r)
 		{
-		case 0: vx = +1; vy = 0;  break;
+		case 0: vx = 1; vy = 0;  break;
 		case 1: vx = 0;  vy = 1;  break;
 		case 2: vx = -1; vy = 0;  break;
 		case 3: vx = 0;  vy = -1; break;
 		}
 	}
+	//Chase, Scatter, or Frightened.
+	/*
+	 * Scatter for 7 seconds, then Chase for 20 seconds.
+	 * Scatter for 7 seconds, then Chase for 20 seconds.
+	 * Scatter for 5 seconds, then Chase for 20 seconds.
+	 * Scatter for 5 seconds, then switch to Chase mode permanently.
+	 */
+	void scatter() {
+		int y = rand() % 30;
+		int x = rand() % 60;
+		choose_smart_path(x, y);
+	}
+	void chase() {
+		choose_smart_path(myPacMan.position.x, myPacMan.position.y);
+	}
+	void frightened() {
 
+	}
+	void setMove(int x, int y) {
+		vx = x;
+		vy = y;
+		int dx = position.x + vx;
+		int dy = position.y + vy;
+		ghostField[position.y][position.x] = EMPTY_SYMBOL;
+		position.x = dx;
+		position.y = dy;
+		ghostField[position.y][position.x] = GHOST_SYMBOL;
+	}
 
-	void choose_smart_path()
+	int distance(int x1, int y1, int x2, int y2)
 	{
+		int distancex = (x2 - x1) * (x2 - x1);
+		int distancey = (y2 - y1) * (y2 - y1);
+		int distance = distancex - distancey;
+		if (distance < 0) {
+			return distancey - distancex;
+		}
+		return distance;
+	}
 
-		/*
-		int r = rand() % 2;
-		//If Right
-		if (vx == 1 || vx == -1)
-		{
-			switch (r)
-			{
-			case 0: vx = 0; vy = 1;  break;
-			case 1: vx = 0;  vy = -1;  break;
-			}
+	int findSmallestPathNumber(int arr[])
+	{
+		int a = arr[0];
+		int b = arr[1];
+		int c = arr[2];
+		int d = arr[3];
+
+		if (a < b && a < c && a < d) {
+			return a;
 		}
-		else if (vy == 1 || vy == -1)
-		{
-			switch (r)
-			{
-			case 0: vx = 1; vy = 0;  break;
-			case 1: vx = -1;  vy = 0;  break;
-			}
+		else if (b < a && b < c && b < d) {
+			return b;
 		}
-		*/
-		bool canRight = false;
-		bool canLeft = false;
-		bool canDown = false;
-		bool canUp = false;
-		//printw("      (%d,%d)       ",vx, vy);
-		if (vx == 1)
+		else if (c < a && c < b && c < d) {
+			return c;
+		}
+		else {
+			return d;
+		}
+	}
+	void keepGoing() {
+		int dx = position.x + vx;
+		int dy = position.y + vy;
+		//Debugging
+		//mvprintw(18, 20, " %d %d %d %d  ", dx, dy, vx, vy);
+		//refresh();
+		//sleep(1);
+		if (ghostField[dy][dx] == WALL_SYMBOL) {
+			if (vx == 1)	//If going right
+			{
+				if (ghostField[position.y - 1][position.x] != WALL_SYMBOL)
+				{
+					//canUp = true;
+					setMove(0, -1);
+				}
+				else
+				{
+					//canDown = true;
+					setMove(0, 1);
+				}
+			}
+			else if (vy == -1) 	//If going up
+			{
+				if (ghostField[position.y][position.x - 1] != WALL_SYMBOL)
+				{
+					//canLeft = true;
+					setMove(-1, 0);
+				}
+				else
+				{
+					//canRight= true;
+					setMove(1, 0);
+				}
+			}
+			else if (vy == 1) 	//If going down
+			{
+				if (ghostField[position.y][position.x + 1] != WALL_SYMBOL)
+				{
+					//canRight = true;
+					setMove(1, 0);
+				}
+				else
+				{
+					//canLeft = true;
+					setMove(-1, 0);
+				}
+			}
+			else if (vx == -1) //If going left
+			{
+				if (ghostField[position.y + 1][position.x] != WALL_SYMBOL)
+				{
+					//canDown = true;
+					setMove(0, 1);
+				}
+				else
+				{
+					//canUp = true;
+					setMove(0, -1);
+				}
+			}
+			else {
+				choose_random_direction();
+			}
+
+		}
+	}
+
+	void choose_smart_path(int x, int y)
+	{
+		//On Logic Tile
+		if (decisionField[position.y][position.x] == LOGIC_SYMBOL)
 		{
+			int xPAC = x;
+			int yPAC = y;
+			int arr[] = { 5000,5000,5000,5000 };
+
 			if (ghostField[position.y + 1][position.x] != WALL_SYMBOL)
 			{
-				//vx = 0; vy = 1;
-				canUp = true;
+				arr[0] = distance(xPAC, yPAC, position.x, position.y + 1);
 			}
 			if (ghostField[position.y - 1][position.x] != WALL_SYMBOL)
 			{
-				//vx = 0; vy = -1;
-				canDown = true;
+				arr[1] = distance(xPAC, yPAC, position.x, position.y - 1);
 			}
 			if (ghostField[position.y][position.x - 1] != WALL_SYMBOL)
 			{
-				//vx = -1; vy = 0;
-				canLeft = true;
-			}
-		}
-		else if (vy == 1)
-		{
-			if (ghostField[position.y][position.x + 1] != WALL_SYMBOL)
-			{
-				//vx = 1; vy = 0;
-				canRight = true;
-			}
-			if (ghostField[position.y][position.x - 1] != WALL_SYMBOL)
-			{
-				//vx = -1; vy = 0;
-				canLeft = true;
-			}
-			if (ghostField[position.y - 1][position.x] != WALL_SYMBOL)
-			{
-				//vx = 0; vy = -1;
-				canDown = true;
-			}
-		}
-		else if (vy == -1)
-		{
-			if (ghostField[position.y][position.x - 1] != WALL_SYMBOL)
-			{
-				//vx = -1; vy = 0;
-				canLeft = true;
+				arr[2] = distance(xPAC, yPAC, position.x - 1, position.y);
 			}
 			if (ghostField[position.y][position.x + 1] != WALL_SYMBOL)
 			{
-				//vx = 1; vy = 0;
-				canRight = true;
+				arr[3] = distance(xPAC, yPAC, position.x + 1, position.y);
 			}
-			if (ghostField[position.y + 1][position.x] != WALL_SYMBOL)
-			{
-				//vx = 0; vy = 1;
-				canUp = true;
+			int path = findSmallestPathNumber(arr);
+			if (path == arr[0]) {
+				if (ghostField[position.y + 1][position.x] != WALL_SYMBOL)
+				{
+					setMove(0, 1);
+				}
+				else {
+					keepGoing();
+				}
+			}
+			else if (path == arr[1]) {
+				if (ghostField[position.y - 1][position.x] != WALL_SYMBOL)
+				{
+					setMove(0, -1);
+				}
+				else {
+					keepGoing();
+				}
+			}
+			else if (path == arr[2]) {
+				if (ghostField[position.y][position.x - 1] != WALL_SYMBOL)
+				{
+					setMove(-1, 0);
+				}
+				else {
+					keepGoing();
+				}
+			}
+			else if (path == arr[3]) {
+				if (ghostField[position.y][position.x + 1] != WALL_SYMBOL)
+				{
+					setMove(1, 0);
+				}
+				else {
+					keepGoing();
+				}
 			}
 		}
 		else
 		{
-			if (ghostField[position.y + 1][position.x] != WALL_SYMBOL)
-			{
-				//vx = 0; vy = 1;
-				canUp = true;
-			}
-			if (ghostField[position.y - 1][position.x] != WALL_SYMBOL)
-			{
-				//vx = 0; vy = -1;
-				canDown = true;
-			}
-			if (ghostField[position.y][position.x + 1] != WALL_SYMBOL)
-			{
-				//vx = 1; vy = 0;
-				canRight = true;
-			}
-		}
-		bool chosePath = false;
-		while (!chosePath)
-		{
-			int r = rand() % 4;
-			switch (r)
-			{
-			case 0:
-				if (canRight)
-				{
-					vx = 1; vy = 0;
-					chosePath = true;
-				}
-				break;
-			case 1:
-				if (canUp)
-				{
-					vx = 0;  vy = 1;
-					chosePath = true;
-				}
-				break;
-			case 2:
-				if (canLeft)
-				{
-					vx = -1; vy = 0;
-					chosePath = true;
-				}
-				break;
-			case 3:
-				if (canDown)
-				{
-					vx = 0; vy = -1;
-					chosePath = true;
-				}
-				break;
-			}
+			keepGoing();
 		}
 	}
-
-
 
 private:
 	struct coord position;
@@ -400,13 +462,12 @@ private:
 	//char lastChar;
 };
 
-
 std::vector<Ghost*> allGhosts;
 
 void set_cursor_position(int col, int row)
 {
 	//os << "\033[" << col << ";" << row << "H";
-		//printw("\033[%dl;%dH", col, row);
+	//printw("\033[%dl;%dH", col, row);
 	move(row, col);
 	//wmove(win, col row);
 	refresh();
@@ -426,17 +487,69 @@ void add_new_ghost()
 	int x, y;
 	// try to find a (x,y) coordinate randomly where a food piece is
 	/*
-	do
-	{
-		x = 1 + rand() % (W - 1);
-		y = 1 + rand() % (H - 1);
-	} while (playfield[y][x] != FOOD_SYMBOL);
-	*/
-	//Spawn inside the Box
+	 do
+	 {
+	 x = 1 + rand() % (W - 1);
+	 y = 1 + rand() % (H - 1);
+	 } while (playfield[y][x] != FOOD_SYMBOL);
+	 */
+	 //Spawn inside the Box
 	x = rand() % (42 - 17 + 1) + 17;
 	y = rand() % (14 - 12 + 1) + 12;
 	allGhosts.push_back(new Ghost(x, y));
 	ghostMsg = true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MPI CODE
+//
+// cpu holds my processor number, cpu=0 is master, rest are slaves
+// numcpus is the total number of processors
+int cpu, numcpus;
+
+// MPI function
+void mpi(int* a, int N) {
+	printf("MPI was called\n");
+
+	int i, slave;
+	MPI_Status status;
+
+	int numeach = N / numcpus;
+
+	int addedGhosts;
+	addedGhosts = 0;
+
+	// Master process
+	if (cpu == 0) {
+		// For each processor available,
+		// collect the address of the ghost that was added to the board
+//        add_new_ghost();
+//        addedGhosts = 1;
+//        for (slave = 1; slave < numcpus; slave++) {
+//            MPI_Recv(&a[numeach*slave], numeach, MPI_INT, slave, 2, MPI_COMM_WORLD, &status);
+//            addedGhosts++;
+//        }
+
+		for (slave = 1; slave < numcpus; slave++)
+			MPI_Send(&a[numeach*slave], numeach, MPI_INT, slave, 1, MPI_COMM_WORLD);
+
+		for (i = 0; i < numeach; i++)
+			add_new_ghost();
+
+
+		for (slave = 1; slave < numcpus; slave++)
+			MPI_Recv(&a[numeach*slave], numeach, MPI_INT, slave, 2, MPI_COMM_WORLD, &status);
+
+		//        printf("Added ghosts: %d\n", addedGhosts);
+	}
+	// Slave process
+	else {
+		float data[numeach];
+		MPI_Recv(&data[0], numeach, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+		for (i = 0; i < numeach; i++)
+			add_new_ghost();
+		MPI_Send(&data[0], numeach, MPI_INT, 0, 2, MPI_COMM_WORLD);
+	}
 }
 
 void initialize()
@@ -471,11 +584,54 @@ void initialize()
 		}
 	}
 
-	// 2. create some ghosts
-	for (int i = 0; i < NR_GHOSTS_START; i++)
+	//     2. create some ghosts
+	for (int i = 0; i < nr_ghosts_start; i++)
 	{
 		add_new_ghost();
+		printf("Print new ghost: %d\n", i);
 	}
+	refresh();
+
+} // initialize
+
+void initializeMPI(int* a, int N)
+{
+	//Starting position
+	myPacMan.position.x = 29;
+	myPacMan.position.y = 16;
+	myPacMan.vx = 0;
+	myPacMan.vy = 0;
+	myPacMan.food_collected = 0;
+	myPacMan.lives = 3;
+	myPacMan.chasing = false;
+
+	// 1. replace each empty field in the playfield
+	//    with a food field
+	for (int i = 0; i < H; i++)
+	{
+		for (int j = 0; j < W; j++)
+		{
+			resetField[i][j] = playfield[i][j];
+			if (playfield[i][j] == EMPTY_SYMBOL)
+			{
+				playfield[i][j] = FOOD_SYMBOL;
+				foodToWin++;
+			}
+			//Replace X with ' '
+			else if (playfield[i][j] == NO_SPAWN_SYMBOL)
+			{
+				playfield[i][j] = EMPTY_SYMBOL;
+				ghostField[i][j] = EMPTY_SYMBOL;
+			}
+		}
+	}
+
+	// 2. create some ghosts
+	//    for (int i = 0; i < nr_ghosts_start; i++)
+	//    {
+	//        add_new_ghost();
+	//    }
+	mpi(a, N);
 	refresh();
 
 } // initialize
@@ -601,7 +757,6 @@ void infoDisplay() {
 	mvprintw(12, 62, "Score:%3d ", myPacMan.food_collected);
 	mvprintw(13, 62, "Remaining:%3d ", foodToWin - myPacMan.food_collected);
 	mvprintw(14, 62, "Lives:%2d", myPacMan.lives);
-	//mvprintw(15, 62, "Displays:%2d %d %d", displayRight, LINES, COLS);
 	if (ghostMsg && !firstTime) {
 		mvprintw(17, 61, "New Ghost Added!");
 	}
@@ -645,15 +800,16 @@ void check_collisions()
 	// did a collision between PacMan and Ghost happen?
 	if (collision_with_ghost)
 	{
-		mvprintw(myPacMan.position.y, myPacMan.position.x - 1, "(O)");
-		set_cursor_position(W / 2 - 9, H / 2 - 3);
-		printw("   GAME START   ");
-		set_cursor_position(W / 2 - 8, H / 2 - 2);
 		myPacMan.lives--;
-		printw("   Lifes:%d   ", myPacMan.lives);
-		set_cursor_position(W / 2 - 8, H / 2 - 1);
-		printw("   Score:%d   ", myPacMan.food_collected);
+		//Death Visual
+		mvprintw(myPacMan.position.y, myPacMan.position.x - 1, "(O)");
+
+		//After Death Status Board
+		mvprintw(H / 2 - 3, W / 2 - 9, "   GAME START   ");
+		mvprintw(H / 2 - 2, W / 2 - 8, "   Lifes:%d   ", myPacMan.lives);
+		mvprintw(H / 2 - 1, W / 2 - 8, "   Score:%d   ", myPacMan.food_collected);
 		refresh();
+
 		collision_with_ghost = false;
 		resetGhosts();
 
@@ -712,7 +868,7 @@ void resetGhosts() {
 	}
 	firstTime = true;
 	//Creates Ghosts
-	for (int i = 0; i < NR_GHOSTS_START; i++)
+	for (int i = 0; i < nr_ghosts_start; i++)
 	{
 		add_new_ghost();
 	}
@@ -722,13 +878,14 @@ void resetWindow() {
 	erase();
 	mvprintw(15, 20, "Game is still running! ");
 	mvprintw(16, 20, "Please Resize Window...");
+	mvprintw(17, 20, "........%d....%d.....", ys, xs);
 	refresh();
 }
 
 void do_resize()
 {
 	getmaxyx(stdscr, ys, xs);
-	if (ys < 32) {
+	if (ys < H2) {
 		resetWindow();
 		if (xs < 114) {
 			//resize_term(32, 61);
@@ -761,19 +918,14 @@ void do_resize()
 void game(WINDOW *win) {
 	show_playfield(-1);
 	nodelay(stdscr, FALSE);
-	set_cursor_position(W / 2 - 7, H / 2 - 3);
-	printw("   PAC-MAN   ");
-	set_cursor_position(W / 2 - 10, H / 2 - 1);
-	printw("   Press Any Key   ");
+	mvprintw(H / 2 - 3, W / 2 - 7, "   PAC-MAN   ");
+	mvprintw(H / 2 - 1, W / 2 - 10, "   Press Any Key   ");
 	refresh();
 	getch();
 	nodelay(stdscr, TRUE);
-	set_cursor_position(W / 2 - 9, H / 2 - 3);
-	printw("                ");
-	set_cursor_position(W / 2 - 8, H / 2 - 2);
-	printw("   GAME START   ");
-	set_cursor_position(W / 2 - 8, H / 2 - 1);
-	printw("                ");
+	mvprintw(H / 2 - 3, W / 2 - 9, "                ");
+	mvprintw(H / 2 - 2, W / 2 - 8, "   GAME START   ");
+	mvprintw(H / 2 - 1, W / 2 - 8, "                ");
 	refresh();
 	sleep(3);
 
@@ -787,7 +939,7 @@ void game(WINDOW *win) {
 		move_pacman();
 		show_playfield(-1);
 		check_collisions();
-		do_resize();
+		//do_resize();
 
 		usleep(100000);
 
@@ -800,20 +952,16 @@ void game(WINDOW *win) {
 
 		if (myPacMan.food_collected >= foodToWin)
 		{
-			set_cursor_position(W / 2 - 9, H / 2 - 3);
-			printw("                ");
-			set_cursor_position(W / 2 - 7, H / 2 - 2);
-			printw("   YOU WON!   ");
-			set_cursor_position(W / 2 - 8, H / 2 - 1);
-			printw("                ");
+			mvprintw(H / 2 - 3, W / 2 - 9, "                ");
+			mvprintw(H / 2 - 2, W / 2 - 7, "   YOU WON!   ");
+			mvprintw(H / 2 - 1, W / 2 - 8, "                ");
 			sleep(2);
 			getch();
 			resetGame(win);
 		}
 	}
 	erase();
-	set_cursor_position(W / 2 - 8, H / 2 - 2);
-	printw("   GAME OVER!   ");
+	mvprintw(H / 2 - 2, W / 2 - 8, "   GAME OVER!   ");
 	refresh();
 	sleep(5);
 	resetGame(win);
@@ -846,19 +994,85 @@ void art() {
 void playerDeath() {
 	playerField[myPacMan.position.y][myPacMan.position.x] = EMPTY_SYMBOL;
 }
-int main()
+
+void setupGhostBuffer(int *a, int N) {
+	int i;
+	for (i = 0; i < N; ++i) {
+		a[i] = i;
+	}
+}
+
+void print(int* a, int N) {
+	if (doPrint) {
+		int i;
+		for (i = 0; i < N; ++i)
+			printf("%d ", (int)a[i]);
+		printf("\n");
+	}
+}
+
+void starttime() {
+	gettimeofday(&start, 0);
+}
+
+void endtime(const char* c) {
+	gettimeofday(&stop, 0);
+	double elapsed = (stop.tv_sec - start.tv_sec) * 1000.0 + (stop.tv_usec - start.tv_usec) / 1000.0;
+	printf("%s: %f ms\n", c, elapsed);
+}
+
+void init(int* a, int N, const char* c) {
+	printf("***************** %s **********************\n", c);
+	setupGhostBuffer(a, N);
+	starttime();
+}
+
+void finish(int* a, int N, const char* c) {
+	endtime(c);
+	printf("***************************************************\n");
+}
+
+int main(int argc, char** argv)
 {
+	MPI_Init(&argc, &argv);                     // Initialize the MPI environment
+	MPI_Comm_size(MPI_COMM_WORLD, &numcpus);    // Get the number of processes
+	MPI_Comm_rank(MPI_COMM_WORLD, &cpu);        // Get the rank of the process
+
 	WINDOW * win;
 	if ((win = initscr()) == NULL) {
 		printf("Can't load Curses!\n");
 		exit(EXIT_FAILURE);
 	}
 	win = newwin(120, 33, 0, 0);
-	//Resizes cmd window
-	//system("MODE 62,33"); //Windows
-	//wresize(win, 62, 33); //Curses
 	hidecursor();
-	initialize();
+
+	// initialize the number of ghosts for the game
+	nr_ghosts_start = numcpus;
+
+	int a[nr_ghosts_start];
+
+	// Master process code
+	if (cpu == 0) {
+		// initialize the buffer of the number of ghosts for the game
+		setupGhostBuffer(a, nr_ghosts_start);
+		//        printf("nr_ghosts_start is: %d\n" , nr_ghosts_start);
+		//        // Test 1: Sequential For Loop
+		//        init(a, nr_ghosts_start, "Normal");
+		//        initialize();
+		//        // SET original add ghost function here
+		//        finish(a, nr_ghosts_start, "Normal");
+		//        // Test 2: MPI
+		//        init(a, nr_ghosts_start, "MPI");
+	}
+
+	initializeMPI(a, nr_ghosts_start);
+
+	//    if (cpu == 0)
+	//        finish(a, nr_ghosts_start, "MPI");
+
+	MPI_Finalize();
+
+	//    initialize();
 	cbreak();
 	noecho();
 	raw();
@@ -867,5 +1081,7 @@ int main()
 	game(win);
 	endwin();
 
+
 	return 0;
-}
+
+} // main
