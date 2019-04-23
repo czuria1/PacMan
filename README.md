@@ -2,6 +2,13 @@
 ======================================
  
  The goal is to edit _existing code_ and make it multi-process.
+## **Compile**
+To compile on FIU ocelot:
+Type `/usr/lib64/openmpi/bin/mpic++ -lncurses pacman.cpp -o pacman -lm`  
+Then `./pacman` to run  
+  
+If you have mpic++ in your system path, then type:
+`mpic++ -lncurses pacman.cpp -o pacman -lm`
 
 ## **Group**
 
