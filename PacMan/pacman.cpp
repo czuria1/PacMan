@@ -44,6 +44,8 @@
 #define EMPTY_SYMBOL ' '
 #define NO_SPAWN_SYMBOL 'X'
 #define LOGIC_SYMBOL 'A'
+#define POWERUP_SYMBOL 'o'
+#define INVINCIBLE_SYMBOL 'O'
 
 int nr_ghosts_start = 0;
 bool collision_with_ghost = false;
@@ -51,14 +53,16 @@ bool game_over = false;
 bool ghostMsg = false;
 bool firstTime = true;
 bool displayRight = true;
+bool invincible = false;
 int foodToWin = 0;
 int xs = 120;
 int ys = 32;
 int doPrint = 1;
 time_t timer;
+time_t timerInv;
 
 void resetGhosts();
-void game(WINDOW *win);
+void game(WINDOW *win, int a[]);
 void art();
 void playerDeath();
 using namespace std;
@@ -80,9 +84,6 @@ struct PacMan {
 	int food_collected;
 };
 
-
-
-
 struct PacMan myPacMan;
 //Saves field from inital startup.
 char resetField[H + 1][W + 1];
@@ -95,7 +96,7 @@ char playfield[H + 1][W + 1] =
 	{ "############################################################" },
 	{ "#                       ############                       #" },
 	{ "# ######### ########### ############ ########### ######### #" },
-	{ "# ######### ########### ############ ########### ######### #" },
+	{ "#o######### ########### ############ ########### #########o#" },
 	{ "#                                                          #" },
 	{ "# ######### ## ############################## ## ######### #" },
 	{ "#           ## ############################## ##           #" },
@@ -113,7 +114,7 @@ char playfield[H + 1][W + 1] =
 	{ "########### ## ############################## ## ###########" },
 	{ "#                           ####                           #" },
 	{ "# ######### ############### #### ############### ######### #" },
-	{ "# ######### ############### #### ############### ######### #" },
+	{ "#o######### ############### #### ############### #########o#" },
 	{ "#        ##                                      ##        #" },
 	{ "######## ## ## ############################## ## ## ########" },
 	{ "######## ## ## ############################## ## ## ########" },
@@ -201,25 +202,41 @@ public:
 	{
 		this->position.x = start_x;
 		this->position.y = start_y;
-		this->chasing = true;
 		choose_random_direction();
 	}
-
+	int getX() {
+		return position.x;
+	}
+	int getY() {
+		return position.y;
+	}
 	void move()
 	{
 		// 1. where does the Ghost want to move to?
 		int dx = position.x + vx;
 		int dy = position.y + vy;
+		int nx = position.x - vx;
+		int ny = position.y - vy;
 
 		// 2. what is at this place where we plan to move the Ghost to?
 		//char whats_there = playfield[dy][dx];
 		char whats_there2 = ghostField[dy][dx];
 		char whats_there3 = playerField[dy][dx];
+		char atFeet = playerField[position.y][position.x];
+		char behind = playerField[ny][nx];
 		// 3. is it a PacMan?
-		if (whats_there3 == PACMAN_SYMBOL)
+		if (whats_there3 == PACMAN_SYMBOL && !invincible)
 		{
 			collision_with_ghost = true;
 			playerDeath();
+		}
+		if ((whats_there3 == INVINCIBLE_SYMBOL || atFeet == INVINCIBLE_SYMBOL || behind == INVINCIBLE_SYMBOL) && invincible)
+		{
+			ghostField[position.y][position.x] = EMPTY_SYMBOL;
+			int x = rand() % (42 - 17 + 1) + 17;
+			int y = rand() % (14 - 12 + 1) + 12;
+			this->position.x = x;
+			this->position.y = y;
 		}
 		// 4. is the field free to move there?
 		if (whats_there2 != WALL_SYMBOL && decisionField[position.y][position.x] != LOGIC_SYMBOL)
@@ -261,9 +278,6 @@ public:
 	//Chase, Scatter, or Frightened.
 	/*
 	 * Scatter for 7 seconds, then Chase for 20 seconds.
-	 * Scatter for 7 seconds, then Chase for 20 seconds.
-	 * Scatter for 5 seconds, then Chase for 20 seconds.
-	 * Scatter for 5 seconds, then switch to Chase mode permanently.
 	 */
 	void scatter() {
 		int y = rand() % 30;
@@ -273,9 +287,7 @@ public:
 	void chase() {
 		choose_smart_path(myPacMan.position.x, myPacMan.position.y);
 	}
-	void frightened() {
 
-	}
 	void setMove(int x, int y) {
 		vx = x;
 		vy = y;
@@ -300,31 +312,41 @@ public:
 
 	int findSmallestPathNumber(int arr[])
 	{
-		int a = arr[0];
-		int b = arr[1];
-		int c = arr[2];
-		int d = arr[3];
-
-		if (a < b && a < c && a < d) {
-			return a;
+		int temp = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			if (arr[i] != 0) {
+				temp = arr[i];
+			}
 		}
-		else if (b < a && b < c && b < d) {
-			return b;
+		int min = temp;
+		for (int i = 0; i < 4; i++)
+		{
+			if (min > arr[i] && arr[i] != 0)
+				min = arr[i];
 		}
-		else if (c < a && c < b && c < d) {
-			return c;
+		return min;
+	}
+	int findBiggestPathNumber(int arr[])
+	{
+		int temp = 0;
+		for (int i = 0; i < 4; i++)
+		{
+			if (arr[i] != 0) {
+				temp = arr[i];
+			}
 		}
-		else {
-			return d;
+		int max = temp;
+		for (int i = 0; i < 4; i++)
+		{
+			if (max < arr[i] && arr[i] != 0)
+				max = arr[i];
 		}
+		return max;
 	}
 	void keepGoing() {
 		int dx = position.x + vx;
 		int dy = position.y + vy;
-		//Debugging
-		//mvprintw(18, 20, " %d %d %d %d  ", dx, dy, vx, vy);
-		//refresh();
-		//sleep(1);
 		if (ghostField[dy][dx] == WALL_SYMBOL) {
 			if (vx == 1)	//If going right
 			{
@@ -392,25 +414,52 @@ public:
 		{
 			int xPAC = x;
 			int yPAC = y;
-			int arr[] = { 5000,5000,5000,5000 };
+			int arr[] = { 0,0,0,0 };
+			bool upPrev = false;
+			bool downPrev = false;
+			bool rightPrev = false;
+			bool leftPrev = false;
 
-			if (ghostField[position.y + 1][position.x] != WALL_SYMBOL)
+			if (vx == 1)	//If going right
+			{
+				rightPrev = true;
+			}
+			else if (vy == -1) 	//If going up
+			{
+				upPrev = true;
+			}
+			else if (vy == 1) 	//If going down
+			{
+				downPrev = true;
+			}
+			else if (vx == -1) //If going left
+			{
+				leftPrev = true;
+			}
+			if (ghostField[position.y + 1][position.x] != WALL_SYMBOL && !upPrev)
 			{
 				arr[0] = distance(xPAC, yPAC, position.x, position.y + 1);
 			}
-			if (ghostField[position.y - 1][position.x] != WALL_SYMBOL)
+			if (ghostField[position.y - 1][position.x] != WALL_SYMBOL && !downPrev)
 			{
 				arr[1] = distance(xPAC, yPAC, position.x, position.y - 1);
 			}
-			if (ghostField[position.y][position.x - 1] != WALL_SYMBOL)
+			if (ghostField[position.y][position.x - 1] != WALL_SYMBOL && !rightPrev)
 			{
 				arr[2] = distance(xPAC, yPAC, position.x - 1, position.y);
 			}
-			if (ghostField[position.y][position.x + 1] != WALL_SYMBOL)
+			if (ghostField[position.y][position.x + 1] != WALL_SYMBOL && !leftPrev)
 			{
 				arr[3] = distance(xPAC, yPAC, position.x + 1, position.y);
 			}
-			int path = findSmallestPathNumber(arr);
+
+			int path = 1;
+			if (invincible) {
+				path = findBiggestPathNumber(arr);
+			}
+			else {
+				path = findSmallestPathNumber(arr);
+			}
 			if (path == arr[0]) {
 				if (ghostField[position.y + 1][position.x] != WALL_SYMBOL)
 				{
@@ -447,6 +496,10 @@ public:
 					keepGoing();
 				}
 			}
+			else
+			{
+				keepGoing();
+			}
 		}
 		else
 		{
@@ -458,8 +511,6 @@ private:
 	struct coord position;
 	int vx;
 	int vy;
-	bool chasing;
-	//char lastChar;
 };
 
 std::vector<Ghost*> allGhosts;
@@ -509,7 +560,7 @@ int cpu, numcpus;
 
 // MPI function
 void mpi(int* a, int N) {
-	printf("MPI was called\n");
+	mvprintw(18, 62, "MPI was called\n");
 
 	int i, slave;
 	MPI_Status status;
@@ -533,9 +584,12 @@ void mpi(int* a, int N) {
 		for (slave = 1; slave < numcpus; slave++)
 			MPI_Send(&a[numeach*slave], numeach, MPI_INT, slave, 1, MPI_COMM_WORLD);
 
-		for (i = 0; i < numeach; i++)
+		for (i = 0; i < numeach; i++) {
 			add_new_ghost();
-
+			add_new_ghost();
+			add_new_ghost();
+			add_new_ghost();
+		}
 
 		for (slave = 1; slave < numcpus; slave++)
 			MPI_Recv(&a[numeach*slave], numeach, MPI_INT, slave, 2, MPI_COMM_WORLD, &status);
@@ -562,6 +616,7 @@ void initialize()
 	myPacMan.food_collected = 0;
 	myPacMan.lives = 3;
 	myPacMan.chasing = false;
+	invincible = false;
 
 	// 1. replace each empty field in the playfield
 	//    with a food field
@@ -588,7 +643,7 @@ void initialize()
 	for (int i = 0; i < nr_ghosts_start; i++)
 	{
 		add_new_ghost();
-		printf("Print new ghost: %d\n", i);
+		mvprintw(19, 62, "Print new ghost: %d\n", i);
 	}
 	refresh();
 
@@ -604,6 +659,7 @@ void initializeMPI(int* a, int N)
 	myPacMan.food_collected = 0;
 	myPacMan.lives = 3;
 	myPacMan.chasing = false;
+	invincible = false;
 
 	// 1. replace each empty field in the playfield
 	//    with a food field
@@ -627,10 +683,6 @@ void initializeMPI(int* a, int N)
 	}
 
 	// 2. create some ghosts
-	//    for (int i = 0; i < nr_ghosts_start; i++)
-	//    {
-	//        add_new_ghost();
-	//    }
 	mpi(a, N);
 	refresh();
 
@@ -673,6 +725,12 @@ void user_input()
 		if (c1 == 'k')
 		{
 			myPacMan.lives--;
+		}
+		if (c1 == 'z')
+		{
+			invincible = true;
+			timerInv = time(0L);
+			playerField[myPacMan.position.y][myPacMan.position.x] = INVINCIBLE_SYMBOL;
 		}
 		if (c1 == 'r')
 		{
@@ -735,7 +793,17 @@ void move_pacman()
 	myPacMan.position.x += myPacMan.vx;
 	myPacMan.position.y += myPacMan.vy;
 
-	if (ghostField[ny][nx] == GHOST_SYMBOL) {
+	if (invincible)
+	{
+		double duration = difftime(time(0L), timerInv);
+		if (duration > 12)
+		{
+			invincible = false;
+		}
+	}
+
+	if (ghostField[ny][nx] == GHOST_SYMBOL && !invincible)
+	{
 		collision_with_ghost = true;
 		playerDeath();
 	}
@@ -746,9 +814,19 @@ void move_pacman()
 			myPacMan.food_collected++;
 			playfield[ny][nx] = EMPTY_SYMBOL;
 		}
-
-		// put PacMan back again to playfield
-		playerField[myPacMan.position.y][myPacMan.position.x] = PACMAN_SYMBOL;
+		else if (playfield[ny][nx] == POWERUP_SYMBOL)
+		{
+			invincible = true;
+			playfield[ny][nx] = EMPTY_SYMBOL;
+			timerInv = time(0L);
+		}
+		if (!invincible) {
+			// put PacMan back again to playfield
+			playerField[myPacMan.position.y][myPacMan.position.x] = PACMAN_SYMBOL;
+		}
+		else {
+			playerField[myPacMan.position.y][myPacMan.position.x] = INVINCIBLE_SYMBOL;
+		}
 	}
 
 } // move_pacman
@@ -757,6 +835,9 @@ void infoDisplay() {
 	mvprintw(12, 62, "Score:%3d ", myPacMan.food_collected);
 	mvprintw(13, 62, "Remaining:%3d ", foodToWin - myPacMan.food_collected);
 	mvprintw(14, 62, "Lives:%2d", myPacMan.lives);
+	if (invincible) {
+		mvprintw(15, 62, "INVINCIBLE");
+	}
 	if (ghostMsg && !firstTime) {
 		mvprintw(17, 61, "New Ghost Added!");
 	}
@@ -773,7 +854,7 @@ void show_playfield(int steps)
 			{
 				printw("%c", ghostField[i][j]);
 			}
-			else if (playerField[i][j] == PACMAN_SYMBOL)
+			else if (playerField[i][j] == PACMAN_SYMBOL || playerField[i][j] == INVINCIBLE_SYMBOL)
 			{
 				printw("%c", playerField[i][j]);
 			}
@@ -830,7 +911,7 @@ void check_collisions()
 	}
 } // check_collisions
 
-void resetGame(WINDOW *win)
+void resetGame(WINDOW *win, int a[])
 {
 	//Remove characters
 	for (int i = 0; i < H; i++)
@@ -847,10 +928,13 @@ void resetGame(WINDOW *win)
 	game_over = false;
 	ghostMsg = false;
 	firstTime = true;
+	invincible = false;
 	allGhosts.clear();
 	foodToWin = 0;
-	initialize(); //Call last, before game
-	game(win);
+	myPacMan.vx = 0;
+	myPacMan.vy = 0;
+	initializeMPI(a, nr_ghosts_start);
+	game(win, a);
 }
 
 void resetGhosts() {
@@ -915,7 +999,7 @@ void do_resize()
 	}
 }
 
-void game(WINDOW *win) {
+void game(WINDOW *win, int a[]) {
 	show_playfield(-1);
 	nodelay(stdscr, FALSE);
 	mvprintw(H / 2 - 3, W / 2 - 7, "   PAC-MAN   ");
@@ -939,15 +1023,15 @@ void game(WINDOW *win) {
 		move_pacman();
 		show_playfield(-1);
 		check_collisions();
-		//do_resize();
+		do_resize();
 
 		usleep(100000);
 
 		if (++steps % 100 == 0)
 		{
-			firstTime = false;
-			add_new_ghost();
-			show_playfield(steps);
+			//firstTime = false;
+			//add_new_ghost();
+			//show_playfield(steps);
 		}
 
 		if (myPacMan.food_collected >= foodToWin)
@@ -955,16 +1039,17 @@ void game(WINDOW *win) {
 			mvprintw(H / 2 - 3, W / 2 - 9, "                ");
 			mvprintw(H / 2 - 2, W / 2 - 7, "   YOU WON!   ");
 			mvprintw(H / 2 - 1, W / 2 - 8, "                ");
+			refresh();
 			sleep(2);
 			getch();
-			resetGame(win);
+			resetGame(win, a);
 		}
 	}
 	erase();
 	mvprintw(H / 2 - 2, W / 2 - 8, "   GAME OVER!   ");
 	refresh();
 	sleep(5);
-	resetGame(win);
+	resetGame(win, a);
 }
 
 void art() {
@@ -1078,7 +1163,7 @@ int main(int argc, char** argv)
 	raw();
 	keypad(win, true);
 	keypad(stdscr, true);
-	game(win);
+	game(win, a);
 	endwin();
 
 
